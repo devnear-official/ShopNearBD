@@ -38,6 +38,9 @@ export const checkoutSchema = z.object({
   payment: paymentSchema,
   couponCode: z.string().trim().max(32).optional(),
   idempotencyKey: z.string().min(16).max(100),
+  /** Generated in the browser with the idempotency key, so a retried submit still opens the order. */
+  accessToken: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),
+  proofPath: z.string().regex(/^[0-9-]{10}\/[A-Za-z0-9_-]{8,40}\.(jpeg|png|webp)$/).optional(),
 });
 
 export type CheckoutInput = z.input<typeof checkoutSchema>;

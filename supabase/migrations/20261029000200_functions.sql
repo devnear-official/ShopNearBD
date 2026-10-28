@@ -390,7 +390,7 @@ begin
     'coupon_code', o.coupon_code,
     'created_at', o.created_at, 'delivered_at', o.delivered_at,
     'items', (select coalesce(jsonb_agg(jsonb_build_object(
-                'product_name', i.product_name, 'variant_name', i.variant_name, 'quantity', i.quantity,
+                'product_id', i.product_id, 'product_name', i.product_name, 'variant_name', i.variant_name, 'quantity', i.quantity,
                 'unit_price', i.unit_price, 'line_total', i.line_total, 'image_url', i.image_url,
                 'slug', (select slug from public.products p where p.id = i.product_id)) order by i.product_name), '[]'::jsonb)
               from public.order_items i where i.order_id = o.id),

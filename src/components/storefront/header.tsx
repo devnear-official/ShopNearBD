@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { Menu, Search, ShoppingBag, X, PackageSearch, ArrowUpRight } from "lucide-react";
@@ -20,7 +19,6 @@ export function Header({ categories }: { categories: Cat[] }) {
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -28,10 +26,6 @@ export function Header({ categories }: { categories: Cat[] }) {
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  useEffect(() => {
-    setMenu(false);
-    setCatsOpen(false);
-  }, [pathname]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "/" || (e.key === "k" && (e.metaKey || e.ctrlKey))) && !(e.target as HTMLElement)?.closest("input,textarea")) {
@@ -59,7 +53,7 @@ export function Header({ categories }: { categories: Cat[] }) {
           </Link>
 
           <nav aria-label="Main" className="ml-4 hidden items-center gap-1 lg:flex">
-            <NavLink href="/shop" active={pathname === "/shop"}>Shop all</NavLink>
+            <NavLink href="/shop">Shop all</NavLink>
             <div className="relative" onMouseLeave={() => setCatsOpen(false)}>
               <button
                 type="button"
@@ -83,7 +77,7 @@ export function Header({ categories }: { categories: Cat[] }) {
                   >
                     <div className="grid grid-cols-2 gap-1 rounded-3xl bg-white p-3 shadow-[var(--shadow-float)] ring-1 ring-ink/5">
                       {categories.map((c, i) => (
-                        <Link key={c.slug} href={`/shop?category=${c.slug}`} className="group flex items-center gap-3 rounded-2xl p-3 hover:bg-paper">
+                        <Link key={c.slug} href={`/shop?category=${c.slug}`} onClick={() => setCatsOpen(false)} className="group flex items-center gap-3 rounded-2xl p-3 hover:bg-paper">
                           <span className="grid size-10 place-items-center rounded-xl text-sm font-bold text-white" style={{ background: c.accent ?? "#1E6BFF" }}>
                             {String(i + 1).padStart(2, "0")}
                           </span>
@@ -99,8 +93,8 @@ export function Header({ categories }: { categories: Cat[] }) {
                 )}
               </AnimatePresence>
             </div>
-            <NavLink href="/shop?collection=commute-kit" active={false}>Commute Kit</NavLink>
-            <NavLink href="/help" active={pathname === "/help"}>Help</NavLink>
+            <NavLink href="/shop?collection=commute-kit">Commute Kit</NavLink>
+            <NavLink href="/help">Help</NavLink>
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
@@ -156,7 +150,7 @@ export function Header({ categories }: { categories: Cat[] }) {
                 <X className="size-6" />
               </button>
             </div>
-            <nav aria-label="Mobile" className="flex flex-1 flex-col px-5 pb-8">
+            <nav aria-label="Mobile" className="flex flex-1 flex-col px-5 pb-8" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenu(false); }}>
               {[{ href: "/shop", label: "Shop all", bn: "সব পণ্য" }, ...categories.map((c) => ({ href: `/shop?category=${c.slug}`, label: c.name, bn: c.name_bn ?? "" }))].map((l, i) => (
                 <m.div key={l.href} initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.04 * i, duration: 0.3 }}>
                   <Link href={l.href} className="flex items-baseline justify-between border-b border-white/10 py-4">
@@ -180,9 +174,9 @@ export function Header({ categories }: { categories: Cat[] }) {
   );
 }
 
-function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className={clsx("rounded-full px-4 py-2 text-[0.95rem] font-semibold transition", active ? "bg-ink text-white" : "text-ink-2 hover:bg-cloud")}>
+    <Link href={href} className="rounded-full px-4 py-2 text-[0.95rem] font-semibold text-ink-2 transition hover:bg-cloud">
       {children}
     </Link>
   );

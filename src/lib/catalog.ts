@@ -186,3 +186,11 @@ export async function getAllProductSlugs(): Promise<{ slug: string; updated_at: 
 export function imageFor(p: Pick<ProductCard, "images">, variantId?: string | null): ProductImage | null {
   return (variantId && p.images.find((i) => i.variant_id === variantId)) || p.images[0] || null;
 }
+
+export type Faq = { id: string; question: string; answer: string };
+export async function getFaqs(): Promise<Faq[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("faqs");
+  return asAnon((tx) => tx<Faq[]>`select id, question, answer from public.support_faqs where is_active order by sort_order, created_at`);
+}
