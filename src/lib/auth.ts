@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { asUser, system, type Tx } from "./db";
 import { supabaseConfigured, supabaseServer } from "./supabase/server";
 
@@ -9,6 +10,8 @@ export type AdminContext = SessionUser & { db: <T>(fn: (tx: Tx) => Promise<T>) =
 /** The signed-in user, verified with Supabase Auth (not just decoded from the cookie). */
 export async function currentUser(): Promise<SessionUser | null> {
   if (!supabaseConfigured()) return null;
+  // Session checks are always request-time work (never part of a prerendered shell).
+  await connection();
   const sb = await supabaseServer();
   const { data, error } = await sb.auth.getUser();
   if (error || !data.user) return null;
