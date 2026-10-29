@@ -13,7 +13,7 @@ import { DISTRICTS, zonesForDistrict, type ShippingSettings } from "@/lib/shippi
 import { formatTaka } from "@/lib/format";
 import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Stepper } from "@/components/cart/cart-drawer";
-import { Button } from "@/components/ui/button";
+import { CartRideButton } from "@/components/ui/cart-ride-button";
 import { readAttribution, track } from "@/lib/tracking/client";
 import { Field, ManualPayment, METHOD_TITLE, METHODS, accountDelivery, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
 
@@ -45,6 +45,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  const [placed, setPlaced] = useState(false);
   const [quoting, startQuote] = useTransition();
   const keys = useRef<Keys | null>(null);
   const initiated = useRef(false);
@@ -118,7 +119,10 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
       });
       if (res.ok) {
         rememberOrder(res);
-        router.push(`/order/${res.orderNumber}/thank-you?t=${encodeURIComponent(res.token)}`);
+        const next = `/order/${res.orderNumber}/thank-you?t=${encodeURIComponent(res.token)}`;
+        router.prefetch(next);
+        setPlaced(true);
+        setTimeout(() => router.push(next), 750);
         return;
       }
       setPlacing(false);
@@ -255,9 +259,9 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
           {quoteError && <p className="field-error">{quoteError}</p>}
           {submitError && <p role="alert" className="mt-4 flex items-start gap-2 rounded-2xl bg-flame/10 p-3 text-sm font-medium text-[#a3290f]"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> {submitError}</p>}
 
-          <Button type="submit" size="lg" variant="tangerine" disabled={placing || Boolean(issue)} aria-busy={placing} className="mt-5 w-full" data-quick-order-submit>
-            {placing ? <><Loader2 className="size-5 animate-spin" /> Placing order…</> : <><Zap className="size-5" /> Confirm order{quote?.shipping ? ` · ${formatTaka(quote.total)}` : ""}</>}
-          </Button>
+          <CartRideButton type="submit" variant="tangerine" state={placed ? "done" : placing ? "busy" : "idle"} disabled={Boolean(issue)} className="mt-5 w-full" data-quick-order-submit>
+            <Zap className="size-5" /> Confirm order{quote?.shipping ? ` · ${formatTaka(quote.total)}` : ""}
+          </CartRideButton>
           <p className="mt-3 flex items-center gap-2 text-xs text-slate"><PhoneCall className="size-3.5 shrink-0" /> We call to confirm before dispatch. {method === "cod" ? "Pay when the parcel arrives." : ""}</p>
           <button type="button" onClick={() => window.dispatchEvent(new Event("sn:open-chat"))} className="mt-2 flex min-h-10 items-center gap-2 text-sm font-semibold text-electric sm:hidden"><MessageCircle className="size-4" /> Questions? Chat with us</button>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-slate"><Lock className="size-3.5 shrink-0" /> Prices and stock are confirmed by our server. <Link href="/help#returns" className="inline-flex min-h-10 items-center underline">Returns policy</Link></p>

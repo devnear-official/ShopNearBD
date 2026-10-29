@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/intent-link";
 import { useRef } from "react";
 import { m, useScroll, useTransform, useReducedMotion } from "motion/react";
 import type { ProductCard } from "@/lib/catalog";
@@ -38,7 +38,7 @@ export function Campaign({ title, body, collection, products }: { title: string;
         <div className="grid grid-cols-2 gap-4 sm:gap-6">
           {products.map((p, i) => (
             <m.div key={p.id} style={reduce ? undefined : { y: i % 2 ? y2 : y1 }} className={i % 2 ? "mt-16" : ""}>
-              <Link href={`/shop/${p.slug}`} className="group block">
+              <IntentLink href={`/shop/${p.slug}`} className="group block">
                 <div className="tag-hole relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-ink-2">
                   {p.images[1] ?? p.images[0] ? <Image src={(p.images[1] ?? p.images[0]).url} alt={p.images[0]?.alt || p.name} fill sizes="(min-width:1024px) 22rem, 45vw" className="object-cover transition duration-700 group-hover:scale-105" /> : null}
                   <span className="absolute left-4 top-12 font-display text-5xl font-bold text-white/90">{String(i + 1).padStart(2, "0")}</span>
@@ -47,7 +47,7 @@ export function Campaign({ title, body, collection, products }: { title: string;
                   <span className="font-semibold group-hover:underline">{p.name}</span>
                   <span className="font-display font-bold text-tangerine">{formatTaka(p.min_price)}</span>
                 </div>
-              </Link>
+              </IntentLink>
             </m.div>
           ))}
         </div>

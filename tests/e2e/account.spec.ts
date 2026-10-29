@@ -24,6 +24,7 @@ test("order → account is created → log in with SMS code → see all orders, 
 
   // Place an order from the product page.
   await visit(page, "/shop/steel-water-bottle-750");
+  await page.getByRole("button", { name: /Buy now/ }).first().click();
   const form = page.locator("#order-now");
   await form.getByLabel("Your name").fill("Account Tester");
   await form.getByLabel(/Mobile number/).fill(phone);

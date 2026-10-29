@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/intent-link";
 import { useEffect, useRef, useState } from "react";
 import { m, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
 import { ArrowRight, Clock3, MapPin } from "lucide-react";
@@ -56,28 +56,25 @@ export function Hero({ copy, hero, orbit }: { copy: HomepageSettings; hero: Prod
 
       <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[1.08fr_1fr] lg:gap-4">
         <div className="relative z-10 pt-4 lg:pt-0">
-          <m.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-electric shadow-[var(--shadow-card)]">
+          <p className="enter eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-electric shadow-[var(--shadow-card)]">
             <MapPin className="size-3.5" /> {copy.hero_eyebrow}
-          </m.p>
+          </p>
           <h1 className="display mt-6 t-hero">
-            <m.span className="block" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.9, 0.1, 1] }}>
-              {copy.hero_title}
-            </m.span>
-            <m.span className="relative block" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.08, ease: [0.2, 0.9, 0.1, 1] }}>
+            <span className="enter-move block">{copy.hero_title}</span>
+            <span className="enter-move relative block [--d:80ms]">
               <span className="text-gradient pr-2">{copy.hero_title_accent}</span>
-              <m.span aria-hidden className="absolute -bottom-3 left-0 block h-5 w-[min(100%,34rem)] origin-left" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.9, delay: 0.45, ease: [0.2, 0.9, 0.1, 1] }}>
+              <span aria-hidden className="swoosh-in absolute -bottom-3 left-0 block h-5 w-[min(100%,34rem)]">
                 <Swoosh className="h-full w-full" />
-              </m.span>
-            </m.span>
+              </span>
+            </span>
           </h1>
-          <m.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-8 max-w-lg text-base sm:text-lg leading-relaxed text-slate">
+          <p className="enter mt-8 max-w-lg [--d:200ms] text-base sm:text-lg leading-relaxed text-slate">
             {copy.hero_subtitle}
-          </m.p>
-          <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-8 flex flex-wrap items-center gap-3">
+          </p>
+          <div className="enter mt-8 flex flex-wrap items-center gap-3 [--d:280ms]">
             <ButtonLink href="/shop" size="lg">Shop now <ArrowRight className="size-5 transition-transform group-hover/btn:translate-x-1" /></ButtonLink>
             <ButtonLink href={`/shop?collection=${copy.campaign_collection}`} variant="ghost" size="lg">Explore {copy.campaign_title}</ButtonLink>
-          </m.div>
+          </div>
           <DispatchClock />
         </div>
 
@@ -100,33 +97,30 @@ export function Hero({ copy, hero, orbit }: { copy: HomepageSettings; hero: Prod
           <RingLabel className="left-[4%] top-[70%]" text="64 districts" />
 
           {orbit.slice(0, 3).map((p, i) => (
-            <m.div key={p.slug} className="absolute size-[17%]" style={{ left: ["4%", "80%", "70%"][i], top: ["26%", "52%", "80%"][i] }}
-              initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 + i * 0.12, type: "spring", stiffness: 140, damping: 14 }}>
-              <Link href={`/shop/${p.slug}`} className="relative block size-full overflow-hidden rounded-2xl bg-white shadow-[var(--shadow-float)] ring-4 ring-white transition hover:scale-110" aria-label={p.name}>
+            <div key={p.slug} className="pop-in absolute size-[17%]" style={{ left: ["4%", "80%", "70%"][i], top: ["26%", "52%", "80%"][i], ["--d" as string]: `${500 + i * 120}ms` }}>
+              <IntentLink href={`/shop/${p.slug}`} className="relative block size-full overflow-hidden rounded-2xl bg-white shadow-[var(--shadow-float)] ring-4 ring-white transition hover:scale-110" aria-label={p.name}>
                 {p.images[0] && <Image src={p.images[0].url} alt="" fill sizes="96px" className="object-cover" />}
-              </Link>
-            </m.div>
+              </IntentLink>
+            </div>
           ))}
 
           {hero && img && (
             <m.div style={reduce ? undefined : { x: px, y: py, rotateX: rx, rotateY: ry }} className="absolute left-[24%] top-[18%] w-[52%] [transform-style:preserve-3d]">
-              <m.div initial={{ opacity: 0, y: 40, rotate: -6 }} animate={{ opacity: 1, y: 0, rotate: -3 }} transition={{ duration: 0.9, ease: [0.2, 0.9, 0.1, 1] }}>
-                <Link href={`/shop/${hero.slug}`} className="tag-hole relative block aspect-[4/5] overflow-hidden rounded-[2.2rem] bg-white shadow-[0_50px_80px_-30px_rgba(11,21,48,.45)]">
+              <div className="enter-tilt">
+                <IntentLink href={`/shop/${hero.slug}`} className="tag-hole relative block aspect-[4/5] overflow-hidden rounded-[2.2rem] bg-white shadow-[0_50px_80px_-30px_rgba(11,21,48,.45)]">
                   <Image src={img.url} alt={img.alt || hero.name} fill priority sizes="(min-width:1024px) 300px, 52vw" className="object-cover" />
                   <span className="sr-only">{hero.name}</span>
-                </Link>
-              </m.div>
-              <m.div initial={{ opacity: 0, scale: 0.5, rotate: 20 }} animate={{ opacity: 1, scale: 1, rotate: 8 }} transition={{ delay: 0.7, type: "spring", stiffness: 160, damping: 12 }}
-                className="absolute -right-10 -top-6 rounded-2xl rounded-tr-sm bg-tangerine px-4 py-2.5 text-ink shadow-xl sm:-right-14">
+                </IntentLink>
+              </div>
+              <div className="pop-in absolute rotate-[8deg] [--d:700ms] -right-10 -top-6 rounded-2xl rounded-tr-sm bg-tangerine px-4 py-2.5 text-ink shadow-xl sm:-right-14">
                 <p className="text-[0.65rem] font-bold uppercase tracking-widest opacity-70">Now</p>
                 <p className="font-display text-2xl font-extrabold leading-none">{formatTaka(price)}</p>
                 {was ? <s className="text-xs opacity-60">{formatTaka(was)}</s> : null}
-              </m.div>
-              <m.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.85 }}
-                className="absolute -bottom-6 -left-8 max-w-[15rem] rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-xl">
+              </div>
+              <p className="enter absolute [--d:850ms] -bottom-6 -left-8 max-w-[15rem] rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-xl">
                 <span className="block text-xs text-white/60">Featured</span>
                 <span className="font-semibold">{hero.name}</span>
-              </m.p>
+              </p>
             </m.div>
           )}
         </div>

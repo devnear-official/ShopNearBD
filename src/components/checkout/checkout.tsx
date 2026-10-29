@@ -15,6 +15,7 @@ import type { PaymentSettings } from "@/lib/catalog";
 import { formatTaka } from "@/lib/format";
 import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { CartRideButton } from "@/components/ui/cart-ride-button";
 import { Streaks } from "@/components/ui/streaks";
 import { Field, ManualPayment, accountDelivery, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
 import { readAttribution, track } from "@/lib/tracking/client";
@@ -22,7 +23,9 @@ import { readAttribution, track } from "@/lib/tracking/client";
 export function Checkout({ shipping, payments }: { shipping: ShippingSettings; payments: PaymentSettings }) {
   const router = useRouter();
   const state = useCart();
-  const items = useMemo(() => state.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })), [state.items]);
+  // Keyed by what the server needs (variant + quantity), so price/stock refreshes don't re-quote.
+  const itemsKey = state.items.map((i) => `${i.variantId}:${i.quantity}`).join(",");
+  const items = useMemo(() => (itemsKey ? itemsKey.split(",").map((s) => { const [variantId, q] = s.split(":"); return { variantId, quantity: Number(q) }; }) : []), [itemsKey]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
   const [payErrors, setPayErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  const [placed, setPlaced] = useState(false);
   const [quoting, startQuote] = useTransition();
   const keys = useRef<Keys | null>(null);
   const initiated = useRef(false);
@@ -126,8 +130,11 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     if (res.ok) {
       rememberOrder(res);
       try { sessionStorage.removeItem("sn_checkout"); } catch {}
-      cart.clear();
-      router.replace(`/order/${res.orderNumber}/thank-you?t=${encodeURIComponent(res.token)}`);
+      // Let the cart finish its ride, then open the thank-you page (prefetched meanwhile).
+      const next = `/order/${res.orderNumber}/thank-you?t=${encodeURIComponent(res.token)}`;
+      router.prefetch(next);
+      setPlaced(true);
+      setTimeout(() => { cart.clear(); router.replace(next); }, 750);
       return;
     }
     setPlacing(false);
@@ -135,6 +142,9 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     if (res.code === "OUT_OF_STOCK" || res.code === "PRODUCT_UNAVAILABLE") runQuote();
     if (res.fieldErrors && Object.keys(res.fieldErrors).some((k) => k.startsWith("delivery"))) goTo(1);
   };
+
+  // Until the bag is read from this device, hold the space so nothing jumps.
+  if (!state.hydrated) return <div aria-busy="true" className="mx-auto min-h-[70vh] max-w-6xl"><div className="skeleton h-12 w-72 rounded-full" /><div className="skeleton mt-6 h-[28rem] rounded-[2rem]" /></div>;
 
   if (state.hydrated && state.items.length === 0 && !placing) {
     return (
@@ -337,9 +347,9 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
             {submitError && <p role="alert" className="mt-6 flex items-start gap-2 rounded-2xl bg-flame/10 p-4 text-sm font-medium text-[#a3290f]"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> {submitError}</p>}
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button type="button" variant="ghost" size="lg" onClick={() => goTo(2)} disabled={placing}><ChevronLeft className="size-5" /> Back</Button>
-              <Button type="button" size="lg" onClick={place} disabled={!ready || placing || !quote?.shipping} className="min-w-56 flex-1 sm:flex-none" aria-busy={placing}>
-                {placing ? <><Loader2 className="size-5 animate-spin" /> Placing order…</> : <>Place order · {formatTaka(total)}</>}
-              </Button>
+              <CartRideButton type="button" onClick={place} state={placed ? "done" : placing ? "busy" : "idle"} disabled={!ready || !quote?.shipping} className="min-w-56 flex-1 sm:flex-none">
+                Place order · {formatTaka(total)}
+              </CartRideButton>
             </div>
             <p className="mt-4 text-xs text-slate">By placing the order you agree to our <Link href="/help#returns" className="underline">returns & refund policy</Link>. {method === "cod" ? "You pay when the parcel arrives." : "Your order is confirmed once we verify the payment."}</p>
           </div>
