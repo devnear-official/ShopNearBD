@@ -64,7 +64,7 @@ export default async function HomePage() {
 
       <section className="mx-auto mt-28 max-w-7xl px-4 text-center sm:px-8">
         <Reveal>
-          <h2 className="display mx-auto max-w-4xl text-[clamp(3rem,9vw,7rem)]">
+          <h2 className="display mx-auto max-w-4xl text-[clamp(2.4rem,9vw,7rem)]">
             Closer than <span className="relative inline-block">you think.<Swoosh className="absolute -bottom-2 left-0 h-4 w-full" /></span>
           </h2>
           <p className="bn mx-auto mt-6 max-w-md text-lg text-slate" lang="bn">যা দরকার, সব কাছেই — অর্ডার করুন, বাকিটা আমাদের।</p>

@@ -52,7 +52,7 @@ async function ThankYou({ params, searchParams }: Props) {
       <section className="relative overflow-hidden rounded-[2.5rem] bg-ink p-7 text-white sm:p-10">
         <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full bg-electric/40 blur-[90px]" />
         <CheckCircle2 className="relative size-12 text-mint" />
-        <h1 className="display relative mt-5 text-[clamp(2.6rem,8vw,4.6rem)]">Thank you, {firstName}!</h1>
+        <h1 className="display relative mt-5 text-[clamp(2.2rem,8vw,4.6rem)]">Thank you, {firstName}!</h1>
         <p className="bn relative mt-1 text-lg text-white/70" lang="bn">ধন্যবাদ! আপনার অর্ডার আমরা পেয়েছি।</p>
         <dl className="relative mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Order number</dt><dd className="mt-1 font-mono text-lg font-bold">{o.order_number}</dd></div>

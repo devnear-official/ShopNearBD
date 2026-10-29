@@ -68,7 +68,7 @@ async function OrderView({ params, searchParams }: Params) {
       {fresh && <Celebrate />}
       <header className={clsx("relative overflow-hidden rounded-[2.5rem] p-6 sm:p-10", fresh ? "bg-ink text-white" : "bg-white shadow-[var(--shadow-card)]")}>
         <p className={clsx("eyebrow", fresh ? "text-sky" : "text-electric")}>Order {o.order_number}</p>
-        <h1 className="display mt-3 text-[clamp(2.6rem,7vw,4.8rem)]">{fresh ? "Thank you! Order received." : status.label}</h1>
+        <h1 className="display mt-3 text-[clamp(2.2rem,7vw,4.8rem)]">{fresh ? "Thank you! Order received." : status.label}</h1>
         <p className={clsx("bn mt-1 text-lg", fresh ? "text-white/70" : "text-slate")} lang="bn">{fresh ? "আপনার অর্ডার আমরা পেয়েছি" : status.bn}</p>
         <p className={clsx("mt-4 max-w-2xl text-lg", fresh ? "text-white/85" : "text-ink-2")}>
           {fresh
