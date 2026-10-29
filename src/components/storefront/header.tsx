@@ -166,13 +166,13 @@ export function Header({ categories }: { categories: Cat[] }) {
             <nav aria-label="Mobile" className="flex flex-1 flex-col px-5 pb-8" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenu(false); }}>
               {[{ href: "/shop", label: "Shop all", bn: "সব পণ্য" }, ...categories.map((c) => ({ href: `/shop?category=${c.slug}`, label: c.name, bn: c.name_bn ?? "" }))].map((l, i) => (
                 <m.div key={l.href} initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.04 * i, duration: 0.3 }}>
-                  <Link href={l.href} className="flex items-baseline justify-between gap-3 border-b border-white/10 py-3.5">
-                    <span className="display min-w-0 text-[clamp(1.4rem,6.5vw,2.1rem)]">{l.label}</span>
+                  <Link href={l.href} className="flex min-h-14 items-center justify-between gap-3 border-b border-white/10 py-3">
+                    <span className="min-w-0 text-lg font-semibold">{l.label}</span>
                     <span className="bn shrink-0 text-sm text-white/50" lang="bn">{l.bn}</span>
                   </Link>
                 </m.div>
               ))}
-              <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                 <Link href="/order" className="rounded-2xl bg-white/10 p-4 font-semibold">Track my order</Link>
                 <Link href="/help" className="rounded-2xl bg-white/10 p-4 font-semibold">Help & policies</Link>
                 <Link href="/wishlist" className="rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist</Link>
