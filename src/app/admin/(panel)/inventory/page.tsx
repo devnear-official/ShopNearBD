@@ -18,9 +18,9 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       where v.sku not like '%-OLD-%' ${q ? tx`and (p.name ilike ${"%" + q + "%"} or v.sku ilike ${"%" + q + "%"} or p.sku ilike ${"%" + q + "%"})` : tx``} ${low ? tx`and v.stock <= p.low_stock_threshold and v.is_active` : tx``}
       order by (v.stock <= p.low_stock_threshold) desc, v.stock asc, p.name limit 200`,
     tx<{ id: number; delta: number; stock_after: number; reason: string; note: string | null; created_at: Date; sku: string; product: string; order_number: string | null; actor: string | null }[]>`
-      select m.id, m.delta, m.stock_after, m.reason, m.note, m.created_at, v.sku, p.name as product, o.order_number, u.email as actor
+      select m.id, m.delta, m.stock_after, m.reason, m.note, m.created_at, v.sku, p.name as product, o.order_number, case when m.actor_id is null then null else coalesce(u.full_name, 'Admin') end as actor
       from public.inventory_movements m join public.product_variants v on v.id = m.variant_id join public.products p on p.id = v.product_id
-      left join public.orders o on o.id = m.order_id left join auth.users u on u.id = m.actor_id
+      left join public.orders o on o.id = m.order_id left join public.profiles u on u.id = m.actor_id
       ${q ? tx`where (p.name ilike ${"%" + q + "%"} or v.sku ilike ${"%" + q + "%"})` : tx``}
       order by m.id desc limit 40`,
   ]));

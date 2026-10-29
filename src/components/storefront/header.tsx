@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowUpRight, Heart, Menu, PackageSearch, Search, ShoppingCart, UserRound, X } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";

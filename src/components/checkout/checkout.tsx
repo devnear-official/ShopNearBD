@@ -151,9 +151,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
       () => scrollTo(document.querySelector("#delivery [aria-invalid='true']") ?? document.getElementById("delivery")),
     )(e);
 
-  // Until the bag is read from this device, hold the space so nothing jumps.
-  if (!state.hydrated) return <div aria-busy="true" className="mx-auto min-h-[70vh] max-w-6xl"><div className="skeleton h-12 w-72 rounded-full" /><div className="skeleton mt-6 h-[28rem] rounded-[2rem]" /></div>;
-
+  // The form does not depend on the bag, so it is in the first paint; only the empty-bag message waits for the bag to be read from this device.
   if (state.hydrated && state.items.length === 0 && !placing && !placed) {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center py-24 text-center">
