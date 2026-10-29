@@ -110,9 +110,9 @@ export function ProductExperience({ product, shipping, payments, children }: { p
 
         <div className="lg:sticky lg:top-28 lg:h-max">
           {product.category && <Link href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</Link>}
-          <h1 className="display mt-3 text-[clamp(1.9rem,6vw,4.2rem)]">{product.name}</h1>
-          {product.name_bn && <p className="bn mt-2 text-lg text-slate" lang="bn">{product.name_bn}</p>}
-          <p className="mt-4 text-lg text-slate">{product.short_description}</p>
+          <h1 className="display mt-3 t-page">{product.name}</h1>
+          {product.name_bn && <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">{product.name_bn}</p>}
+          <p className="mt-4 text-base sm:text-lg text-slate">{product.short_description}</p>
 
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -249,7 +249,7 @@ export function RecentlyViewed({ exclude }: { exclude: string }) {
   if (!items.length) return null;
   return (
     <section aria-labelledby="recent" className="mx-auto mt-20 max-w-7xl px-4 sm:px-8">
-      <h2 id="recent" className="display text-3xl">Recently viewed</h2>
+      <h2 id="recent" className="display t-sub">Recently viewed</h2>
       <div className="scrollbar-none -mx-4 mt-5 flex gap-3 overflow-x-auto px-4 pb-2">
         {items.map((i) => (
           <Link key={i.slug} href={`/shop/${i.slug}`} className="w-36 shrink-0">

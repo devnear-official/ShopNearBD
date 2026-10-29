@@ -5,7 +5,7 @@ export function Price({ value, compareAt, size = "md", className }: { value: num
   const off = compareAt ? percentOff(compareAt, value) : null;
   return (
     <span className={clsx("inline-flex flex-wrap items-baseline gap-x-2 gap-y-0.5", className)}>
-      <span className={clsx("font-display font-bold tabular-nums tracking-tight text-ink", { sm: "text-base", md: "text-lg", lg: "text-2xl", xl: "text-4xl" }[size])}>
+      <span className={clsx("font-display font-bold tabular-nums tracking-tight text-ink", { sm: "text-base", md: "text-lg", lg: "text-2xl", xl: "text-[1.875rem] sm:text-4xl" }[size])}>
         {formatTaka(value)}
       </span>
       {compareAt && off ? (
