@@ -136,15 +136,15 @@ export function ProductCard({ product, priority, className, tone = "light", larg
                 const c = swatch(label);
                 return (
                   <button key={v.id} type="button" onClick={() => setVariant(v)} aria-pressed={selected} aria-label={`${label}${v.stock <= 0 ? " (sold out)" : ""}`} title={label}
-                    className={clsx("relative grid size-8 place-items-center rounded-full transition", selected ? "ring-2 ring-electric ring-offset-2" : "ring-1 ring-ink/10 hover:scale-110", dark && "ring-offset-ink")}>
-                    <span className="size-5 rounded-full" style={{ background: c, boxShadow: isLight(c) ? "inset 0 0 0 1px rgba(11,21,48,.15)" : undefined }} />
-                    {v.stock <= 0 && <span aria-hidden className="absolute h-0.5 w-6 rotate-45 rounded bg-flame" />}
+                    className={clsx("relative grid size-10 place-items-center rounded-full transition", selected ? "ring-2 ring-electric ring-offset-2" : "ring-1 ring-ink/10 hover:scale-110", dark && "ring-offset-ink")}>
+                    <span className="size-6 rounded-full" style={{ background: c, boxShadow: isLight(c) ? "inset 0 0 0 1px rgba(11,21,48,.15)" : undefined }} />
+                    {v.stock <= 0 && <span aria-hidden className="absolute h-0.5 w-7 rotate-45 rounded bg-flame" />}
                   </button>
                 );
               }
               return (
                 <button key={v.id} type="button" onClick={() => setVariant(v)} aria-pressed={selected}
-                  className={clsx("h-8 rounded-full px-3 text-xs font-semibold transition", selected ? "bg-ink text-white" : dark ? "bg-white/10 text-white" : "bg-cloud text-ink-2 hover:bg-line", v.stock <= 0 && "line-through opacity-50")}>
+                  className={clsx("h-10 rounded-full px-3.5 text-xs font-semibold transition", selected ? "bg-ink text-white" : dark ? "bg-white/10 text-white" : "bg-cloud text-ink-2 hover:bg-line", v.stock <= 0 && "line-through opacity-50")}>
                   {label}
                 </button>
               );

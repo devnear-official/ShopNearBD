@@ -21,13 +21,10 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => {
     if (!open) return;
     const term = q.trim();
-    if (term.length < 2) {
-      setHits([]);
-      return;
-    }
+    if (term.length < 2) return;
     const ctrl = new AbortController();
-    setLoading(true);
     const t = setTimeout(async () => {
+      setLoading(true);
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal });
         if (res.ok) setHits((await res.json()).items);
@@ -37,9 +34,11 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
     return () => {
       clearTimeout(t);
       ctrl.abort();
+      setLoading(false);
     };
   }, [q, open]);
 
+  const visibleHits = q.trim().length >= 2 ? hits : [];
   const submit = (term: string) => {
     onClose();
     router.push(`/shop?q=${encodeURIComponent(term.trim())}`);
@@ -71,9 +70,9 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
                     ))}
                   </div>
                 </div>
-              ) : hits.length ? (
+              ) : visibleHits.length ? (
                 <ul>
-                  {hits.map((h) => (
+                  {visibleHits.map((h) => (
                     <li key={h.slug}>
                       <Link href={`/shop/${h.slug}`} onClick={onClose} className="flex items-center gap-4 rounded-2xl p-2.5 hover:bg-paper">
                         <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-cloud">

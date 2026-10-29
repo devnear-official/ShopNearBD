@@ -43,7 +43,13 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
   const submit = form.handleSubmit((values) => {
     setErrors({});
     start(async () => {
-      const r = await saveProduct({ ...values, id: values.id || undefined });
+      // Fill blank variant SKUs/names from the product so a simple product needs no variant setup.
+      const variants = values.variants.map((v, i) => ({
+        ...v,
+        name: v.name.trim() || (i === 0 ? "Default" : `Option ${i + 1}`),
+        sku: v.sku.trim() || `${values.sku}-${i === 0 ? "STD" : i + 1}`.toUpperCase(),
+      }));
+      const r = await saveProduct({ ...values, variants, id: values.id || undefined });
       if (r.ok) {
         toast("Product saved.");
         if (!initial.id) router.replace(`/admin/products/${r.id}`);

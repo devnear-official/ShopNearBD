@@ -54,14 +54,15 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
     }
   }, [merge]);
 
-  // Load history once the panel is first opened.
-  useEffect(() => {
-    if (open && !loaded) {
+  const openChat = () => {
+    setOpen(true);
+    setUnread(false);
+    if (!loaded) {
+      // Load history the first time the panel opens.
       setLoaded(true);
       void poll();
     }
-    if (open) setUnread(false);
-  }, [open, loaded, poll]);
+  };
 
   // While a person is handling the chat, check for their replies.
   useEffect(() => {
@@ -108,7 +109,7 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
         {!open && (
           <m.button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={openChat}
             initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
             aria-label={unread ? "Open chat — new reply from our team" : "Chat with us"}

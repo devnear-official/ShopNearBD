@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { parseJsonArray, useStoredValue } from "@/hooks/use-stored-value";
 import { m, useReducedMotion } from "motion/react";
 import { Loader2, ShieldAlert, Star } from "lucide-react";
 import { submitPaymentLater, submitReview } from "@/actions/order";
@@ -9,20 +10,16 @@ import { formatDate, formatTaka } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
 type Saved = { number: string; token: string; total: number; at: string };
-const readSaved = (): Saved[] => {
-  try { return JSON.parse(localStorage.getItem("sn_orders") ?? "[]"); } catch { return []; }
-};
 
 /** /order/<number> without a token: use the one saved on this device, if any. */
 export function TokenResolver({ number }: { number: string }) {
   const router = useRouter();
-  const [missing, setMissing] = useState(false);
+  const [orders, , hydrated] = useStoredValue<Saved[]>("sn_orders", parseJsonArray, []);
+  const hit = orders.find((o) => o.number === number);
   useEffect(() => {
-    const hit = readSaved().find((o) => o.number === number);
     if (hit) router.replace(`/order/${number}?t=${encodeURIComponent(hit.token)}`);
-    else setMissing(true);
-  }, [number, router]);
-  if (!missing) return <div className="skeleton h-72 rounded-[2rem]" />;
+  }, [hit, number, router]);
+  if (!hydrated || hit) return <div className="skeleton h-72 rounded-[2rem]" />;
   return (
     <div className="rounded-[2rem] bg-white p-8 text-center shadow-[var(--shadow-card)]">
       <h1 className="display text-4xl">Private order link needed</h1>
@@ -33,9 +30,8 @@ export function TokenResolver({ number }: { number: string }) {
 }
 
 export function SavedOrders() {
-  const [orders, setOrders] = useState<Saved[] | null>(null);
-  useEffect(() => setOrders(readSaved()), []);
-  if (orders === null) return <div className="skeleton h-40 rounded-[2rem]" />;
+  const [orders, , hydrated] = useStoredValue<Saved[]>("sn_orders", parseJsonArray, []);
+  if (!hydrated) return <div className="skeleton h-40 rounded-[2rem]" />;
   if (!orders.length) return <p className="rounded-[2rem] bg-white p-6 text-slate shadow-[var(--shadow-card)]">No orders are saved on this device yet. Orders appear here automatically after you check out in this browser.</p>;
   return (
     <ul className="space-y-3">

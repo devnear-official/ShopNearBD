@@ -14,13 +14,18 @@ import { useDialog } from "@/hooks/use-dialog";
  */
 export function ProductGallery({ images, name, activeIndex }: { images: ProductImage[]; name: string; activeIndex: number }) {
   const [current, setCurrent] = useState(activeIndex);
+  const [shownActive, setShownActive] = useState(activeIndex);
+  if (activeIndex !== shownActive) {
+    // Variant changed: highlight its image (state adjusted during render, not in an effect).
+    setShownActive(activeIndex);
+    setCurrent(activeIndex);
+  }
   const [viewer, setViewer] = useState<number | null>(null);
   const strip = useRef<HTMLDivElement>(null);
   const stack = useRef<HTMLDivElement>(null);
 
   // Variant change → bring its image into view.
   useEffect(() => {
-    setCurrent(activeIndex);
     const s = strip.current;
     if (s) s.scrollTo({ left: s.clientWidth * activeIndex, behavior: "smooth" });
     const target = stack.current?.children[activeIndex] as HTMLElement | undefined;

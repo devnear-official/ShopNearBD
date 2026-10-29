@@ -8,6 +8,7 @@ import { replyToChat, updateConversation } from "@/actions/admin-chat";
 import { saveFaq } from "@/actions/admin-catalog";
 
 type Conv = { id: string; status: string; mode: string; needs_human: boolean; admin_unread: boolean; last_message_at: Date; preview: string | null; messages: number };
+type Faq = { id: string; question: string; answer: string; tags: string[]; sort_order: number; is_active: boolean };
 type Msg = { id: number; role: string; content: string; created_at: Date; meta: { intent?: string; source?: string } };
 
 export default async function ChatAdmin({ searchParams }: { searchParams: Promise<{ c?: string; filter?: string; tab?: string }> }) {
@@ -24,20 +25,7 @@ export default async function ChatAdmin({ searchParams }: { searchParams: Promis
   );
 
   if (tab === "faq") {
-    const faqs = await admin.db((tx) => tx<{ id: string; question: string; answer: string; tags: string[]; sort_order: number; is_active: boolean }[]>`select id, question, answer, tags, sort_order, is_active from public.support_faqs order by sort_order, created_at`);
-    const FaqForm = ({ f }: { f?: (typeof faqs)[number] }) => (
-      <ActionForm action={saveFaq} className="space-y-2" resetOnSuccess={!f}>
-        {f && <input type="hidden" name="id" value={f.id} />}
-        <Field label="Question" name="question" defaultValue={f?.question} required />
-        <TextArea label="Answer" name="answer" defaultValue={f?.answer} rows={3} required />
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Field label="Keywords" hint="comma separated, any language" name="tags" defaultValue={f?.tags.join(", ")} className="sm:col-span-2" />
-          <Field label="Order" name="sort_order" type="number" min={0} defaultValue={f?.sort_order ?? 0} />
-        </div>
-        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="is_active" defaultChecked={f?.is_active ?? true} className="size-4 accent-electric" /> Active (used by the assistant and the Help page)</label>
-        <div className="flex gap-2"><SubmitButton size="sm">{f ? "Save" : "Add FAQ"}</SubmitButton>{f && <SubmitButton size="sm" variant="ghost" name="delete" value="1" confirm="Delete this FAQ?">Delete</SubmitButton>}</div>
-      </ActionForm>
-    );
+    const faqs = await admin.db((tx) => tx<Faq[]>`select id, question, answer, tags, sort_order, is_active from public.support_faqs order by sort_order, created_at`);
     return (
       <>
         <PageHeader title="Support chat" description="The assistant answers only from these FAQs, the live catalogue and your settings." />
@@ -131,5 +119,21 @@ export default async function ChatAdmin({ searchParams }: { searchParams: Promis
         ) : <Card className="hidden lg:block"><Empty>Select a conversation.</Empty></Card>}
       </div>
     </>
+  );
+}
+
+function FaqForm({ f }: { f?: Faq }) {
+return (
+    <ActionForm action={saveFaq} className="space-y-2" resetOnSuccess={!f}>
+      {f && <input type="hidden" name="id" value={f.id} />}
+      <Field label="Question" name="question" defaultValue={f?.question} required />
+      <TextArea label="Answer" name="answer" defaultValue={f?.answer} rows={3} required />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Field label="Keywords" hint="comma separated, any language" name="tags" defaultValue={f?.tags.join(", ")} className="sm:col-span-2" />
+        <Field label="Order" name="sort_order" type="number" min={0} defaultValue={f?.sort_order ?? 0} />
+      </div>
+      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="is_active" defaultChecked={f?.is_active ?? true} className="size-4 accent-electric" /> Active (used by the assistant and the Help page)</label>
+      <div className="flex gap-2"><SubmitButton size="sm">{f ? "Save" : "Add FAQ"}</SubmitButton>{f && <SubmitButton size="sm" variant="ghost" name="delete" value="1" confirm="Delete this FAQ?">Delete</SubmitButton>}</div>
+    </ActionForm>
   );
 }

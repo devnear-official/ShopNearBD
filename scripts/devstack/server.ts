@@ -209,7 +209,10 @@ async function storage(req: http.IncomingMessage, res: http.ServerResponse, url:
     const body = JSON.parse((await readBody(req)).toString() || "{}") as { prefixes?: string[] };
     for (const pre of body.prefixes ?? []) {
       const f = path.join(STORAGE_DIR, bucket, pre);
-      if (f.startsWith(path.join(STORAGE_DIR, bucket))) fs.rmSync(f, { force: true }), fs.rmSync(`${f}.meta.json`, { force: true });
+      if (f.startsWith(path.join(STORAGE_DIR, bucket))) {
+        fs.rmSync(f, { force: true });
+        fs.rmSync(`${f}.meta.json`, { force: true });
+      }
     }
     return send(res, 200, (body.prefixes ?? []).map((name) => ({ name })));
   }

@@ -17,9 +17,9 @@ export function PageHeader({ title, description, actions, back }: { title: strin
 
 export function Card({ title, actions, children, className, pad = true }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
   return (
-    <section className={clsx("rounded-3xl bg-white shadow-[var(--shadow-card)]", pad && "p-5", className)}>
+    <section className={clsx("min-w-0 rounded-3xl bg-white shadow-[var(--shadow-card)]", pad && "p-5", className)}>
       {(title || actions) && (
-        <div className={clsx("mb-4 flex items-center justify-between gap-3", !pad && "px-5 pt-5")}>
+        <div className={clsx("mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1", !pad && "px-5 pt-5")}>
           {title && <h2 className="font-display text-lg font-bold">{title}</h2>}
           {actions}
         </div>

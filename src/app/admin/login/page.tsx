@@ -7,7 +7,7 @@ export default function AdminLogin({ searchParams }: { searchParams: Promise<{ n
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <Logo tone="dark" className="h-10" />
+        <div><Logo tone="dark" className="h-10" /></div>
         <div>
           <Streaks tone="tangerine" className="h-8 w-16" />
           <p className="display mt-6 text-6xl">Run the shop from one place.</p>

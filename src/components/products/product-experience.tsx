@@ -11,6 +11,7 @@ import { compareAtPrice, unitPrice } from "@/lib/pricing";
 import { formatTaka } from "@/lib/format";
 import { swatch, isLight } from "@/lib/colors";
 import { DISTRICTS, zonesForDistrict, type ShippingSettings } from "@/lib/shipping";
+import { parseJsonArray, useStoredValue, writeStored } from "@/hooks/use-stored-value";
 import { cart } from "@/components/cart/cart-store";
 import { Stepper } from "@/components/cart/cart-drawer";
 import { Price } from "@/components/ui/price";
@@ -22,7 +23,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   const options = product.option_names.filter((n) => product.variants.some((v) => v.options[n]));
   const initial = product.variants.find((v) => v.stock > 0) ?? product.variants[0];
   const [selected, setSelected] = useState<Record<string, string>>(() => ({ ...(initial?.options ?? {}) }));
-  const [qty, setQty] = useState(1);
+  const [qtyInput, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const buttons = useRef<HTMLDivElement>(null);
   const [showBar, setShowBar] = useState(false);
@@ -36,8 +37,8 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   const stock = variant?.stock ?? 0;
   const imageIndex = Math.max(0, product.images.findIndex((i) => i.variant_id && i.variant_id === variant?.id));
   const maxQty = Math.min(20, stock);
-
-  useEffect(() => setQty((q) => Math.max(1, Math.min(q, Math.max(1, maxQty)))), [maxQty]);
+  // Derived, so switching to a variant with less stock never leaves an impossible quantity.
+  const qty = Math.max(1, Math.min(qtyInput, Math.max(1, maxQty)));
 
   // Remember for "recently viewed".
   useEffect(() => {
@@ -45,7 +46,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
       const key = "sn_recent";
       const list = JSON.parse(localStorage.getItem(key) ?? "[]") as { slug: string }[];
       const entry = { slug: product.slug, name: product.name, image: product.images[0]?.url ?? null };
-      localStorage.setItem(key, JSON.stringify([entry, ...list.filter((x) => x.slug !== product.slug)].slice(0, 10)));
+      writeStored(key, JSON.stringify([entry, ...list.filter((x) => x.slug !== product.slug)].slice(0, 10)));
     } catch {}
   }, [product.slug, product.name, product.images]);
 
@@ -86,7 +87,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
         <ProductGallery images={product.images} name={product.name} activeIndex={imageIndex} />
 
         <div className="lg:sticky lg:top-28 lg:h-max">
-          {product.category && <Link href={`/shop?category=${product.category.slug}`} className="eyebrow text-electric hover:underline">{product.category.name}</Link>}
+          {product.category && <Link href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</Link>}
           <h1 className="display mt-3 text-[clamp(2.4rem,6vw,4.2rem)]">{product.name}</h1>
           {product.name_bn && <p className="bn mt-2 text-lg text-slate" lang="bn">{product.name_bn}</p>}
           <p className="mt-4 text-lg text-slate">{product.short_description}</p>
@@ -187,16 +188,13 @@ function Perk({ icon: Icon, children }: { icon: typeof Truck; children: React.Re
 }
 
 function DeliveryEstimator({ shipping, subtotal }: { shipping: ShippingSettings; subtotal: number }) {
-  const [district, setDistrict] = useState("");
-  useEffect(() => {
-    try { setDistrict(localStorage.getItem("sn_district") ?? ""); } catch {}
-  }, []);
+  const [district, setDistrict] = useStoredValue("sn_district", (r) => r ?? "", "");
   const zones = district ? zonesForDistrict(shipping, district) : [];
   const free = shipping.free_shipping_threshold !== null && subtotal >= (shipping.free_shipping_threshold ?? Infinity);
   return (
     <div className="mt-8 rounded-[1.5rem] bg-white p-4 shadow-[var(--shadow-card)]">
       <label htmlFor="pdp-district" className="flex items-center gap-2 text-sm font-semibold"><MapPin className="size-4 text-tangerine" /> Delivery to</label>
-      <select id="pdp-district" value={district} onChange={(e) => { setDistrict(e.target.value); try { localStorage.setItem("sn_district", e.target.value); } catch {} }} className="input mt-2">
+      <select id="pdp-district" value={district} onChange={(e) => setDistrict(e.target.value)} className="input mt-2">
         <option value="">Choose your district</option>
         {DISTRICTS.map((d) => <option key={d}>{d}</option>)}
       </select>
@@ -215,10 +213,8 @@ function DeliveryEstimator({ shipping, subtotal }: { shipping: ShippingSettings;
 }
 
 export function RecentlyViewed({ exclude }: { exclude: string }) {
-  const [items, setItems] = useState<{ slug: string; name: string; image: string | null }[]>([]);
-  useEffect(() => {
-    try { setItems((JSON.parse(localStorage.getItem("sn_recent") ?? "[]") as typeof items).filter((x) => x.slug !== exclude).slice(0, 6)); } catch {}
-  }, [exclude]);
+  const [recent] = useStoredValue<{ slug: string; name: string; image: string | null }[]>("sn_recent", parseJsonArray, []);
+  const items = recent.filter((x) => x.slug !== exclude).slice(0, 6);
   if (!items.length) return null;
   return (
     <section aria-labelledby="recent" className="mx-auto mt-20 max-w-7xl px-4 sm:px-8">

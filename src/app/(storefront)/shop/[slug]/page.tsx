@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Star } from "lucide-react";
@@ -30,7 +31,25 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function ProductPage({ params }: Params) {
+export default function ProductPage({ params }: Params) {
+  // Params are read inside Suspense so products created after the build render on demand (ISR).
+  return (
+    <Suspense fallback={<ProductSkeleton />}>
+      <ProductView params={params} />
+    </Suspense>
+  );
+}
+
+function ProductSkeleton() {
+  return (
+    <div className="mx-auto grid max-w-7xl gap-8 px-4 pt-10 sm:px-8 lg:grid-cols-2" aria-busy="true" aria-label="Loading product">
+      <div className="skeleton aspect-[4/5] rounded-[2rem]" />
+      <div className="space-y-4"><div className="skeleton h-14 w-3/4 rounded-xl" /><div className="skeleton h-6 w-1/2 rounded" /><div className="skeleton h-12 w-40 rounded-full" /></div>
+    </div>
+  );
+}
+
+async function ProductView({ params }: Params) {
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) notFound();
@@ -106,7 +125,7 @@ export default async function ProductPage({ params }: Params) {
             <Details title="Returns & warranty">
               <p className="text-sm text-ink-2">{settings.policies.returns}</p>
               <p className="mt-2 text-sm text-ink-2">{settings.policies.warranty}</p>
-              <Link href="/help#returns" className="mt-2 inline-block text-sm font-semibold text-electric underline">Full policy</Link>
+              <Link href="/help#returns" className="mt-1 inline-flex min-h-10 items-center text-sm font-semibold text-electric underline">Full returns policy</Link>
             </Details>
           </div>
         </ProductExperience>

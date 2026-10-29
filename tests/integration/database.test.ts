@@ -177,3 +177,12 @@ describe.skipIf(skip)("admin operations", () => {
     expect(s).toBe(v.stock + 5);
   });
 });
+
+describe.skipIf(skip)("inventory log permissions", () => {
+  it("admins can record stock movements for themselves; customers cannot", async () => {
+    const v = await variantBySku("HOME-BREW-18-STD");
+    await asAdmin((tx) => tx`insert into public.inventory_movements (variant_id, delta, stock_after, reason, actor_id) values (${v.id}, 1, ${v.stock}, 'adjustment', ${admin.id})`);
+    await expect(asAdmin((tx) => tx`insert into public.inventory_movements (variant_id, delta, stock_after, reason, actor_id) values (${v.id}, 1, ${v.stock}, 'adjustment', ${customer.id})`)).rejects.toThrow(/row-level security/);
+    await expect(asCustomer((tx) => tx`insert into public.inventory_movements (variant_id, delta, stock_after, reason) values (${v.id}, 1, 1, 'adjustment')`)).rejects.toThrow(/row-level security/);
+  });
+});

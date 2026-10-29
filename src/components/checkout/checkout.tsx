@@ -35,7 +35,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | undefined>();
-  const [method, setMethod] = useState<Method | null>(null);
+  const [method, setMethod] = useState<Method | null>(() => (["cod", "bkash_manual", "nagad_manual"] as Method[]).find((m) => payments[m]?.enabled) ?? null);
   const [payLater, setPayLater] = useState(false);
   const [sender, setSender] = useState("");
   const [txid, setTxid] = useState("");
@@ -51,7 +51,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
   const district = useWatch({ control: form.control, name: "district" });
   const zone = useWatch({ control: form.control, name: "zone" });
   const phone = useWatch({ control: form.control, name: "phone" });
-  const zones = district ? zonesForDistrict(shipping, district) : [];
+  const zones = useMemo(() => (district ? zonesForDistrict(shipping, district) : []), [district, shipping]);
 
   // Idempotency key + order secret survive a refresh but not a completed order.
   useEffect(() => {
@@ -64,9 +64,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     } catch {
       keys.current = newKeys();
     }
-    const firstMethod = (["cod", "bkash_manual", "nagad_manual"] as Method[]).find((m) => payments[m]?.enabled) ?? null;
-    setMethod(firstMethod);
-  }, [form, payments]);
+  }, [form]);
 
   useEffect(() => {
     if (zones.length && !zones.some((z) => z.id === zone)) form.setValue("zone", zones[0].id);
@@ -99,10 +97,11 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     requestAnimationFrame(() => top.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
 
-  const submitDelivery = form.handleSubmit((d) => {
-    try { localStorage.setItem("sn_delivery", JSON.stringify({ ...d, note: "" })); } catch {}
-    goTo(2);
-  });
+  const submitDelivery = (e: React.FormEvent<HTMLFormElement>) =>
+    form.handleSubmit((d) => {
+      try { localStorage.setItem("sn_delivery", JSON.stringify({ ...d, note: "" })); } catch {}
+      goTo(2);
+    })(e);
 
   const validatePayment = () => {
     const errs: Record<string, string> = {};

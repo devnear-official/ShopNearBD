@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-/** Current year, set after hydration so the static shell stays cacheable. */
+const noop = () => () => {};
+
+/** Current year on the client; a fixed fallback in the prerendered shell. */
 export function Year({ fallback = 2026 }: { fallback?: number }) {
-  const [y, setY] = useState(fallback);
-  useEffect(() => setY(new Date().getFullYear()), []);
+  const y = useSyncExternalStore(noop, () => new Date().getFullYear(), () => fallback);
   return <span>{y}</span>;
 }

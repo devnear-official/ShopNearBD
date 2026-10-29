@@ -3,6 +3,7 @@ import { Streaks } from "@/components/ui/streaks";
 export function Marquee({ items }: { items: string[] }) {
   const row = [...items, ...items];
   return (
+    <div className="overflow-x-clip py-3">
     <div className="relative -rotate-1 overflow-hidden bg-ink py-4 text-white shadow-[var(--shadow-float)]">
       <div className="flex w-max animate-marquee items-center gap-10 pr-10 motion-reduce:animate-none">
         {[...row, ...row].map((t, i) => (
@@ -12,6 +13,7 @@ export function Marquee({ items }: { items: string[] }) {
           </span>
         ))}
       </div>
+    </div>
     </div>
   );
 }

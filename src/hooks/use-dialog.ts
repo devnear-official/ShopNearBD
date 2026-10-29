@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 /** Focus trap + Escape-to-close + scroll lock + focus restore for modal panels. */
 export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => void) {
   const ref = useRef<T>(null);
   const close = useRef(onClose);
-  close.current = onClose;
+  useLayoutEffect(() => {
+    close.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -26,8 +28,13 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
         const els = focusables();
         if (!els.length) return;
         const [a, b] = [els[0], els[els.length - 1]];
-        if (e.shiftKey && document.activeElement === a) (e.preventDefault(), b.focus());
-        else if (!e.shiftKey && document.activeElement === b) (e.preventDefault(), a.focus());
+        if (e.shiftKey && document.activeElement === a) {
+          e.preventDefault();
+          b.focus();
+        } else if (!e.shiftKey && document.activeElement === b) {
+          e.preventDefault();
+          a.focus();
+        }
       }
     };
     document.addEventListener("keydown", onKey);

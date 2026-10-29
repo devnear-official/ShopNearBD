@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCategories, listProducts } from "@/lib/catalog";
@@ -22,7 +23,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  return <Suspense fallback={<div className="mx-auto max-w-7xl px-4 pt-8 sm:px-8"><div className="skeleton h-64 rounded-[2.5rem]" /></div>}><CategoryView params={params} /></Suspense>;
+}
+
+async function CategoryView({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const cat = (await getCategories()).find((c) => c.slug === slug);
   if (!cat) notFound();

@@ -79,7 +79,7 @@ async function OrderView({ params, searchParams }: Params) {
               : `Your order is submitted. We'll call ${o.phone_masked} to confirm, and you'll pay ${formatTaka(o.total)} when it arrives.`
             : status.detail}
         </p>
-        {fresh && <p className="mt-4 text-sm text-white/60">Bookmark this page — it's your private link to track the order. It's also saved on this device under “Track my order”.</p>}
+        {fresh && <p className="mt-4 text-sm text-white/60">Bookmark this page — it&apos;s your private link to track the order. It&apos;s also saved on this device under “Track my order”.</p>}
       </header>
 
       {!closed ? (
