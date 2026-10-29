@@ -10,6 +10,10 @@ import { ActionForm, Field, SubmitButton, TextArea } from "@/components/admin/fo
 import { addOrderNote, recordCod, recordRefund, transitionOrder, updateOrderDelivery, verifyPayment } from "@/actions/admin-orders";
 import { buttonClass } from "@/components/ui/button";
 import { CourierPanel } from "@/components/admin/courier-panel";
+import { CustomerCheck } from "@/components/admin/customer-check";
+import { getPublicSettings } from "@/lib/catalog";
+import { confirmMessage } from "@/lib/whatsapp";
+import type { RiskInput } from "@/lib/risk";
 
 const NEXT: Record<string, { to: string; label: string; variant: "primary" | "dark" | "danger" | "ghost" }[]> = {
   pending: [{ to: "confirmed", label: "Confirm order", variant: "primary" }, { to: "cancelled", label: "Reject / cancel", variant: "danger" }],
@@ -41,12 +45,17 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
       tx<{ id: number; body: string; actor_label: string; created_at: Date }[]>`select * from public.order_notes where order_id = ${id} order by id desc`,
       tx<{ id: string; provider: string; is_sandbox: boolean; status: string; consignment_id: string | null; tracking_code: string | null; tracking_url: string | null; label_url: string | null; cod_amount: number; cod_collected: number | null; last_error: string | null; attempts: number; created_at: Date; updated_at: Date }[]>`
         select id, provider, is_sandbox, status, consignment_id, tracking_code, tracking_url, label_url, cod_amount, cod_collected, last_error, attempts, created_at, updated_at from public.shipments where order_id = ${id} order by created_at desc`,
-      tx<{ n: number; delivered: number; cancelled: number }[]>`select count(*)::int as n, count(*) filter (where status = 'delivered')::int as delivered, count(*) filter (where status in ('cancelled','returned'))::int as cancelled from public.orders where phone = ${o.phone} and id <> ${id}`,
+      tx<{ r: RiskInput }[]>`select public.customer_risk(${o.phone}) as r`.then((x) => x[0].r),
     ]);
-    return { o, items, payments, history, notes, shipments, prior: prior[0] };
+    return { o, items, payments, history, notes, shipments, risk: prior };
   });
   if (!data) notFound();
-  const { o, items, payments, history, notes, shipments, prior } = data;
+  const { o, items, payments, history, notes, shipments, risk } = data;
+  const store = (await getPublicSettings()).store;
+  const confirmText = confirmMessage({
+    store: store.name, name: o.customer_name, orderNumber: o.order_number, total: o.total, method: o.payment_method as "cod" | "bkash_manual" | "nagad_manual", address: o.address + (o.area ? `, ${o.area}` : ""), district: o.district,
+    items: items.map((i) => `• ${i.product_name}${i.variant_name !== "Default" ? ` (${i.variant_name})` : ""} × ${i.quantity}`).join("\n"),
+  });
 
   const proofUrls = new Map<string, string>();
   for (const p of payments.filter((x) => x.proof_path)) {
@@ -170,12 +179,13 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             {o.payment_method !== "cod" && o.status === "pending" && o.payment_status !== "paid" && <p className="mt-3 rounded-xl bg-sun/15 p-3 text-xs font-medium text-[#7a4d05]">Advance payment not verified yet. Verify it before confirming, or confirm only after calling the customer.</p>}
           </Card>
 
+          <CustomerCheck phone={o.phone} risk={risk} confirmText={confirmText} />
+
           <Card title="Customer & delivery">
             <p className="font-semibold">{o.customer_name}</p>
             <p className="text-sm"><a href={`tel:${o.phone}`} className="font-mono text-electric">{o.phone}</a>{o.email && <> · {o.email}</>}</p>
             <p className="mt-2 text-sm">{o.address}{o.area ? `, ${o.area}` : ""}, <b>{o.district}</b></p>
             {o.delivery_note && <p className="mt-2 rounded-xl bg-sun/15 p-2 text-sm">Note: {o.delivery_note}</p>}
-            <p className="mt-3 text-xs text-slate">Previous orders from this phone: <b>{prior.n}</b> ({prior.delivered} delivered, {prior.cancelled} cancelled/returned)</p>
             {editable && (
               <details className="mt-3 rounded-2xl bg-paper p-3">
                 <summary className="cursor-pointer text-sm font-semibold">Edit delivery details</summary>

@@ -3,7 +3,7 @@ import { collectErrors, noHorizontalOverflow, visit } from "./helpers";
 
 test("home page renders the brand story and real catalogue", async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto("/");
+  await visit(page, "/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Shop near.");
   await expect(page.getByRole("heading", { name: /Shop by category/ })).toBeVisible();
   await expect(page.locator("article").first()).toBeVisible();
@@ -12,14 +12,14 @@ test("home page renders the brand story and real catalogue", async ({ page }) =>
 });
 
 test("shop filters are shareable URLs and search works", async ({ page }) => {
-  await page.goto("/shop");
+  await visit(page, "/shop");
   await page.getByRole("group", { name: "Categories" }).getByRole("button", { name: /Audio/ }).click();
   await expect(page).toHaveURL(/category=audio/);
   await expect(page.locator("article h3")).toHaveCount(3);
-  await page.goto("/shop?q=bottle");
+  await visit(page, "/shop?q=bottle");
   await expect(page.locator("article h3").first()).toContainText("Bottle");
-  await page.goto("/shop?q=zzzznotathing");
-  await expect(page.getByText("Nothing matches")).toBeVisible();
+  await visit(page, "/shop?q=zzzznotathing");
+  await expect(page.getByText("Nothing matches").filter({ visible: true })).toBeVisible();
 });
 
 test("variant selection updates price; add to bag; adjust quantity", async ({ page }) => {
@@ -41,14 +41,15 @@ test("variant selection updates price; add to bag; adjust quantity", async ({ pa
 test("guest cart checkout with Cash on Delivery creates a private order page", async ({ page, browser }) => {
   await visit(page, "/shop/steel-water-bottle-750");
   await page.getByRole("button", { name: /Add to bag/ }).first().click();
-  await page.goto("/checkout");
+  await visit(page, "/checkout");
   await page.getByLabel("Full name").fill("E2E Shopper");
   await page.getByLabel(/Mobile number/).fill("01812-345678");
   await page.getByLabel("District").selectOption("Sylhet");
   await page.getByLabel(/Full address/).fill("House 3, Zindabazar Road, Sylhet");
-  await page.getByRole("button", { name: "Continue to payment" }).click();
-  await page.getByRole("button", { name: "Review order" }).click();
-  await expect(page.getByText(/Outside Dhaka · 3–5 days/)).toBeVisible();
+  // One page: delivery and payment together, then a single button.
+  await expect(page.getByRole("heading", { name: "How would you like to pay?" })).toBeVisible();
+  // The total only appears once the server has priced the order for the chosen district.
+  await expect(page.getByRole("button", { name: /Place order/ })).toContainText("৳");
   await page.getByRole("button", { name: /Place order/ }).click();
   await page.waitForURL(/\/order\/SN\d{11}\/thank-you\?t=/);
   await expect(page.getByRole("heading", { name: /Thank you, E2E!/ })).toBeVisible();
@@ -61,9 +62,9 @@ test("guest cart checkout with Cash on Delivery creates a private order page", a
   // Another browser without the private token cannot see the order.
   const other = await browser.newContext();
   const p2 = await other.newPage();
-  await p2.goto(`/order/${number}`);
+  await visit(p2, `/order/${number}`);
   await expect(p2.getByRole("heading", { name: "Private order link needed" })).toBeVisible();
-  await p2.goto(`/order/${number}?t=${"x".repeat(32)}`);
+  await visit(p2, `/order/${number}?t=${"x".repeat(32)}`);
   await expect(p2.getByRole("heading", { name: /couldn.t open this order/ })).toBeVisible();
   await other.close();
 });
@@ -71,10 +72,10 @@ test("guest cart checkout with Cash on Delivery creates a private order page", a
 test("checkout validates Bangladeshi phone numbers", async ({ page }) => {
   await visit(page, "/shop/city-sling-bag");
   await page.getByRole("button", { name: /Add to bag/ }).first().click();
-  await page.goto("/checkout");
+  await visit(page, "/checkout");
   await page.getByLabel("Full name").fill("Test");
   await page.getByLabel(/Mobile number/).fill("12345");
-  await page.getByRole("button", { name: "Continue to payment" }).click();
+  await page.getByRole("button", { name: /Place order/ }).click();
   await expect(page.getByText(/valid Bangladeshi mobile number/)).toBeVisible();
 });
 
@@ -106,9 +107,9 @@ test("support chat answers from store data and fits the screen", async ({ page }
 });
 
 test("guest wishlist saves products on this device", async ({ page }) => {
-  await page.goto("/shop/fit-band-7", { waitUntil: "load" });
+  await visit(page, "/shop/fit-band-7");
   await page.getByRole("button", { name: /Save Fit Band 7 to wishlist/ }).first().click();
-  await page.goto("/wishlist");
+  await visit(page, "/wishlist");
   await expect(page.locator("article h3", { hasText: "Fit Band 7" })).toBeVisible();
   await page.getByRole("button", { name: /Remove Fit Band 7 from wishlist/ }).click();
   await expect(page.getByText("Nothing saved yet")).toBeVisible();
