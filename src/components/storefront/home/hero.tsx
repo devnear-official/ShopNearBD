@@ -60,7 +60,7 @@ export function Hero({ copy, hero, orbit }: { copy: HomepageSettings; hero: Prod
             className="eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-electric shadow-[var(--shadow-card)]">
             <MapPin className="size-3.5" /> {copy.hero_eyebrow}
           </m.p>
-          <h1 className="display mt-6 text-[clamp(3.3rem,13vw,8.6rem)]">
+          <h1 className="display mt-6 text-[clamp(2.8rem,13vw,8.6rem)]">
             <m.span className="block" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.9, 0.1, 1] }}>
               {copy.hero_title}
             </m.span>

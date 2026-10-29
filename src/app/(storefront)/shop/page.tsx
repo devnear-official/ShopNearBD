@@ -19,7 +19,7 @@ export default function ShopPage({ searchParams }: { searchParams: Promise<ShopS
     <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-8">
       <header className="relative mb-6">
         <p className="eyebrow flex items-center gap-3 text-electric"><Streaks className="h-3.5 w-7" /> The whole shop</p>
-        <h1 className="display mt-3 text-[clamp(3rem,10vw,7rem)]">Everything, <span className="text-gradient">nearby.</span></h1>
+        <h1 className="display mt-3 text-[clamp(2.4rem,10vw,7rem)]">Everything, <span className="text-gradient">nearby.</span></h1>
         <p className="bn mt-2 text-lg text-slate" lang="bn">সব পণ্য এক জায়গায়</p>
       </header>
       <Suspense fallback={<><div className="h-28" /><ProductGridSkeleton /></>}>

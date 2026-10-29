@@ -140,7 +140,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
       <header className="relative overflow-hidden bg-ink px-5 py-6 text-white sm:px-8">
         <div aria-hidden className="absolute -right-16 -top-20 size-56 rounded-full bg-electric/50 blur-[70px]" />
         <p className="eyebrow relative text-tangerine">Single-page checkout</p>
-        <h2 id="qo-title" className="display relative mt-1 text-[clamp(2rem,5vw,3rem)]">Order this now</h2>
+        <h2 id="qo-title" className="display relative mt-1 text-[clamp(1.75rem,5vw,3rem)]">Order this now</h2>
         <p className="bn relative text-white/75" lang="bn">এখানেই নাম, ফোন আর ঠিকানা দিয়ে অর্ডার করুন — অন্য পেজে যেতে হবে না।</p>
       </header>
 

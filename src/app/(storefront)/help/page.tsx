@@ -16,7 +16,7 @@ export default async function HelpPage() {
     <div className="mx-auto max-w-4xl px-4 pt-10 sm:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }} />
       <Streaks className="h-6 w-12" />
-      <h1 className="display mt-4 text-[clamp(3rem,9vw,6rem)]">How can we help?</h1>
+      <h1 className="display mt-4 text-[clamp(2.4rem,9vw,6rem)]">How can we help?</h1>
       <p className="bn mt-1 text-lg text-slate" lang="bn">সাহায্য ও নীতিমালা</p>
       <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
         {[["delivery", "Delivery"], ["payments", "Payments"], ["returns", "Returns & refunds"], ["faq", "FAQ"], ["contact", "Contact"]].map(([id, l]) => (
