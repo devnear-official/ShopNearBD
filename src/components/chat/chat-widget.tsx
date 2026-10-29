@@ -14,7 +14,7 @@ const QUICK = ["Delivery charge koto?", "bKash e payment kivabe korbo?", "Where 
 const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) ?? undefined; } catch { return undefined; } };
 const savedOrders = () => { try { return (JSON.parse(localStorage.getItem("sn_orders") ?? "[]") as { number: string; token: string }[]).slice(0, 5).map(({ number, token }) => ({ number, token })); } catch { return []; } };
 
-export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string }) {
+export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting: string; autoOpen?: boolean }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [greeting, setGreeting] = useState(fallbackGreeting);
@@ -77,6 +77,11 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
     const t = setInterval(() => void poll(), open ? 5000 : 30000);
     return () => clearInterval(t);
   }, [mode, open, poll]);
+
+  useEffect(() => {
+    if (autoOpen) openChatRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on first mount
+  }, []);
 
   // Other components can open the chat (e.g. the help button on checkout).
   useEffect(() => {

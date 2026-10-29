@@ -25,9 +25,9 @@
   --color-mint: #10b981;
   --color-rose: #f43f5e;
 
-  --font-display: "Bricolage Grotesque Variable", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Figtree Variable", "Hind Siliguri", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-bangla: "Hind Siliguri", "Figtree Variable", sans-serif;
+  --font-display: var(--font-bricolage), "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-bangla: "Noto Sans Bengali", "Kohinoor Bangla", "Hind Siliguri", "Nirmala UI", "Vrinda", system-ui, sans-serif;
 
   --radius-tag: 1.75rem;
   --radius-chip: 999px;
@@ -184,4 +184,75 @@
 /* Phones: hide the floating chat button while the product-page order form is on screen. */
 @media (max-width: 639px) {
   html[data-quick-order="1"] [data-chat-launcher] { display: none; }
+}
+
+/*
+ * Entrance animations in plain CSS: they run as soon as the HTML paints, without
+ * waiting for JavaScript, so the first screen is visible immediately.
+ * Headline text only moves (no fade) so it counts as painted right away.
+ */
+@keyframes enter { from { opacity: 0; transform: translateY(12px); } }
+@keyframes enter-move { from { transform: translateY(22px); } }
+@keyframes enter-tilt { from { transform: translateY(36px) rotate(-6deg); } to { transform: rotate(-3deg); } }
+@keyframes pop-in { from { opacity: 0; scale: 0.6; } }
+@keyframes swoosh-in { from { transform: scaleX(0); } }
+.enter { animation: enter 0.55s var(--ease-snap) var(--d, 0s) both; }
+.enter-move { animation: enter-move 0.7s var(--ease-snap) var(--d, 0s) both; }
+.enter-tilt { transform: rotate(-3deg); animation: enter-tilt 0.9s var(--ease-snap) both; }
+.pop-in { animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) both; }
+.swoosh-in { transform-origin: left; animation: swoosh-in 0.9s var(--ease-snap) 0.45s both; }
+@media (prefers-reduced-motion: reduce) {
+  .enter, .enter-move, .enter-tilt, .pop-in, .swoosh-in { animation: none; }
+}
+
+/* Header cart bump when a product lands in it. */
+@keyframes cart-bump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.18) rotate(-6deg); }
+  55% { transform: scale(0.94) rotate(4deg); }
+  80% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.cart-bump { animation: cart-bump 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (prefers-reduced-motion: reduce) { .cart-bump { animation: none; } }
+
+/* Place-order button: cart rolls in, parcel drops in, cart speeds off right. */
+.ride-btn { position: relative; isolation: isolate; }
+.ride-label { transition: opacity 0.2s, transform 0.3s var(--ease-snap); }
+.ride-label-out { opacity: 0; transform: translateX(24px); }
+.ride-lane { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.ride-cart {
+  position: absolute; top: 50%; left: 0; display: flex; align-items: flex-end;
+  translate: -110% -55%;
+  animation: ride-cart 1.6s cubic-bezier(0.55, 0, 0.35, 1) infinite;
+}
+.ride-cart svg { position: relative; }
+.ride-box {
+  position: absolute; left: 14px; bottom: 11px; width: 13px; height: 11px;
+  border-radius: 2px; background: var(--color-tangerine); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.15);
+  animation: ride-box 1.6s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+.ride-streaks { display: flex; flex-direction: column; gap: 4px; margin-right: 6px; margin-bottom: 10px; opacity: 0; animation: ride-streaks 1.6s linear infinite; }
+.ride-streaks span { display: block; height: 2px; border-radius: 2px; background: currentColor; }
+.ride-streaks span:first-child { width: 18px; }
+.ride-streaks span:last-child { width: 10px; margin-left: 8px; }
+.ride-wheel { transform-box: fill-box; transform-origin: center; }
+@keyframes ride-cart {
+  0% { left: 0; }
+  32%, 56% { left: 50%; translate: -50% -55%; }
+  100% { left: 100%; translate: 30% -55%; }
+}
+@keyframes ride-box {
+  0%, 24% { transform: translateY(-34px); opacity: 0; }
+  30% { opacity: 1; }
+  44%, 100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes ride-streaks {
+  0%, 20% { opacity: 0.8; } 32%, 58% { opacity: 0; } 70%, 100% { opacity: 0.9; }
+}
+.ride-done { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem; animation: enter 0.35s var(--ease-snap) both; }
+@media (prefers-reduced-motion: reduce) {
+  .ride-cart { animation: none; left: 50%; translate: -50% -55%; }
+  .ride-box, .ride-streaks { animation: none; opacity: 1; }
+  .ride-streaks { opacity: 0; }
 }

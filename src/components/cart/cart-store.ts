@@ -66,13 +66,15 @@ export const cart = {
   },
   /** Apply server truth (current price / stock) after a quote. */
   reconcile(lines: { variant_id: string; unit_price: number; stock: number }[]) {
-    set({
-      items: state.items
-        .map((i) => {
-          const l = lines.find((x) => x.variant_id === i.variantId);
-          return l ? { ...i, unitPrice: Number(l.unit_price), maxStock: l.stock } : i;
-        }),
+    let changed = false;
+    const items = state.items.map((i) => {
+      const l = lines.find((x) => x.variant_id === i.variantId);
+      if (!l || (Number(l.unit_price) === i.unitPrice && l.stock === i.maxStock)) return i;
+      changed = true;
+      return { ...i, unitPrice: Number(l.unit_price), maxStock: l.stock };
     });
+    // Only touch state when the server's numbers differ; otherwise every quote would trigger another quote.
+    if (changed) set({ items });
   },
   clear() {
     set({ items: [] });

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/intent-link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { Banknote, Check, MapPin, ShieldCheck, ShoppingBag, Smartphone, Truck, Zap } from "lucide-react";
@@ -12,13 +12,20 @@ import { swatch, isLight } from "@/lib/colors";
 import { DISTRICTS, zonesForDistrict, type ShippingSettings } from "@/lib/shipping";
 import { parseJsonArray, useStoredValue, writeStored } from "@/hooks/use-stored-value";
 import { cart } from "@/components/cart/cart-store";
+import { flyToCart } from "@/lib/fly-to-cart";
 import { Stepper } from "@/components/cart/cart-drawer";
 import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "./product-gallery";
 import { WishlistButton } from "./wishlist";
 import { track } from "@/lib/tracking/client";
-import { QuickOrder } from "@/components/checkout/quick-order";
+import dynamic from "next/dynamic";
+
+// The order form (with its validation library) loads only when the shopper gets near it or taps Buy now.
+const QuickOrder = dynamic(() => import("@/components/checkout/quick-order").then((m) => m.QuickOrder), {
+  ssr: false,
+  loading: () => <div id="order-now" aria-busy="true" className="skeleton mt-16 h-[44rem] scroll-mt-24 rounded-[2.25rem] lg:h-[34rem]" />,
+});
 
 export function ProductExperience({ product, shipping, payments, children }: { product: ProductDetail; shipping: ShippingSettings; payments: PaymentSettings; children?: React.ReactNode }) {
   const options = product.option_names.filter((n) => product.variants.some((v) => v.options[n]));
@@ -30,6 +37,8 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   const [pastButtons, setPastButtons] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(false);
+  const [loadForm, setLoadForm] = useState(false);
+  const orderWrap = useRef<HTMLDivElement>(null);
   const showBar = pastButtons && !formVisible;
 
   const variant: Variant | undefined = useMemo(
@@ -66,10 +75,15 @@ export function ProductExperience({ product, shipping, payments, children }: { p
     if (!el) return;
     const io = new IntersectionObserver(([e]) => { setPastButtons(!e.isIntersecting && e.boundingClientRect.top < 0); setButtonsVisible(e.isIntersecting); }, { threshold: 0 });
     io.observe(el);
-    const form = document.getElementById("order-now");
     const io2 = new IntersectionObserver(([e]) => setFormVisible(e.isIntersecting), { threshold: 0 });
-    if (form) io2.observe(form);
-    return () => { io.disconnect(); io2.disconnect(); };
+    if (orderWrap.current) io2.observe(orderWrap.current);
+    // Start loading the order form a little before it scrolls into view.
+    const io3 = new IntersectionObserver(([e]) => { if (e.isIntersecting) setLoadForm(true); }, { rootMargin: "900px 0px" });
+    if (orderWrap.current) io3.observe(orderWrap.current);
+    // …or once the browser is idle after the page has loaded, so it's ready before the shopper gets there.
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    const idle = w.requestIdleCallback ? w.requestIdleCallback(() => setLoadForm(true), { timeout: 5000 }) : window.setTimeout(() => setLoadForm(true), 3000);
+    return () => { io.disconnect(); io2.disconnect(); io3.disconnect(); (w.cancelIdleCallback ?? clearTimeout)(idle); };
   }, []);
   // On phones the floating chat button would cover the buy buttons or the order form; hide it while they're on screen.
   useEffect(() => {
@@ -81,9 +95,10 @@ export function ProductExperience({ product, shipping, payments, children }: { p
     return () => document.documentElement.style.setProperty("--sticky-bar", "0px");
   }, [showBar]);
 
-  const add = () => {
+  const add = (source?: Element | null) => {
     if (!variant || stock <= 0) return;
     const img = product.images.find((i) => i.variant_id === variant.id) ?? product.images[0];
+    flyToCart(source ?? null, img?.url);
     cart.add({ variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: stock }, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -91,10 +106,19 @@ export function ProductExperience({ product, shipping, payments, children }: { p
 
   /** "Buy now" opens the single-page checkout right here instead of leaving the page. */
   const buyNow = () => {
-    const el = document.getElementById("order-now");
-    if (!el) return;
-    el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    setTimeout(() => (document.getElementById("qo-name") as HTMLInputElement | null)?.focus({ preventScroll: true }), 450);
+    setLoadForm(true);
+    const el = document.getElementById("order-now") ?? orderWrap.current;
+    el?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    // Focus the first field once the form is there (it may still be loading on a slow connection).
+    let tries = 0;
+    const focus = () => {
+      const input = document.getElementById("qo-name") as HTMLInputElement | null;
+      if (input) {
+        document.getElementById("order-now")?.scrollIntoView({ block: "start" });
+        input.focus({ preventScroll: true });
+      } else if (tries++ < 40) setTimeout(focus, 150);
+    };
+    setTimeout(focus, 450);
   };
 
   const valueState = (name: string, value: string) => {
@@ -109,7 +133,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
         <ProductGallery images={product.images} name={product.name} activeIndex={imageIndex} />
 
         <div className="lg:sticky lg:top-28 lg:h-max">
-          {product.category && <Link href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</Link>}
+          {product.category && <IntentLink href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</IntentLink>}
           <h1 className="display mt-3 t-page">{product.name}</h1>
           {product.name_bn && <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">{product.name_bn}</p>}
           <p className="mt-4 text-base sm:text-lg text-slate">{product.short_description}</p>
@@ -161,7 +185,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
               <Stepper value={qty} max={Math.max(1, maxQty)} onChange={setQty} label={product.name} />
               <WishlistButton slug={product.slug} name={product.name} withLabel className="sm:order-last" />
             </div>
-            <Button size="lg" onClick={() => add()} disabled={stock <= 0} className="min-w-0 whitespace-nowrap px-3 sm:px-8">
+            <Button size="lg" onClick={(e) => add(e.currentTarget)} disabled={stock <= 0} className="min-w-0 whitespace-nowrap px-3 sm:px-8">
               {added ? <><Check className="size-5 shrink-0" /> Added</> : <><ShoppingBag className="size-5 shrink-0" /> Add to bag</>}
             </Button>
             <Button size="lg" variant="dark" onClick={buyNow} disabled={stock <= 0} className="min-w-0 whitespace-nowrap px-3 sm:px-8" aria-controls="order-now">
@@ -183,10 +207,14 @@ export function ProductExperience({ product, shipping, payments, children }: { p
         </div>
       </div>
 
-      <QuickOrder
-        product={product} variant={variant} onVariant={(v) => setSelected({ ...v.options })}
-        qty={qty} maxQty={maxQty} onQty={setQty} price={price} shipping={shipping} payments={payments}
-      />
+      <div ref={orderWrap}>
+        {loadForm ? (
+          <QuickOrder
+            product={product} variant={variant} onVariant={(v) => setSelected({ ...v.options })}
+            qty={qty} maxQty={maxQty} onQty={setQty} price={price} shipping={shipping} payments={payments}
+          />
+        ) : <div id="order-now" className="mt-16 h-[44rem] scroll-mt-24 rounded-[2.25rem] bg-white/60 lg:h-[34rem]" />}
+      </div>
 
       <AnimatePresence>
         {showBar && (
@@ -198,7 +226,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
                 <p className="truncate text-sm font-semibold">{product.name}{variant && variant.name !== "Default" ? ` · ${variant.name}` : ""}</p>
                 <p className="font-display font-bold">{formatTaka(price)}</p>
               </div>
-              <Button size="md" onClick={() => add()} disabled={stock <= 0}>{added ? <Check className="size-5" /> : <ShoppingBag className="size-5" />}<span className="sr-only sm:not-sr-only">Add</span></Button>
+              <Button size="md" onClick={(e) => add(e.currentTarget)} disabled={stock <= 0}>{added ? <Check className="size-5" /> : <ShoppingBag className="size-5" />}<span className="sr-only sm:not-sr-only">Add</span></Button>
               <Button size="md" variant="dark" onClick={buyNow} disabled={stock <= 0} aria-controls="order-now">Buy now</Button>
             </div>
           </m.div>
@@ -252,10 +280,10 @@ export function RecentlyViewed({ exclude }: { exclude: string }) {
       <h2 id="recent" className="display t-sub">Recently viewed</h2>
       <div className="scrollbar-none -mx-4 mt-5 flex gap-3 overflow-x-auto px-4 pb-2">
         {items.map((i) => (
-          <Link key={i.slug} href={`/shop/${i.slug}`} className="w-36 shrink-0">
+          <IntentLink key={i.slug} href={`/shop/${i.slug}`} className="w-36 shrink-0">
             <span className="relative block aspect-[4/5] overflow-hidden rounded-2xl bg-cloud">{i.image && <Image src={i.image} alt="" fill sizes="144px" className="object-cover" />}</span>
             <span className="mt-2 line-clamp-2 block text-sm font-semibold">{i.name}</span>
-          </Link>
+          </IntentLink>
         ))}
       </div>
     </section>

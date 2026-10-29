@@ -57,3 +57,24 @@ pgbench -n -f perf/pgbench-checkout.sql -D vid=<variant uuid> -c 16 -j 2 -T 20 s
 
 k6 run -e BASE=https://staging.example.com perf/k6-shop.js
 ```
+
+## Phone load speed (lab, 29 Oct 2026)
+
+`perf/lab.cjs` loads pages like a mid-range phone on a weak connection (Lighthouse "Slow 4G": 1.6 Mbps, 150 ms RTT, 4× CPU slowdown), second visit to a warm server, first visit for the browser. Measured on a local production build, so server time is near zero; real-world times add your hosting's response time.
+
+| Page | Before: LCP / bytes | After: LCP / bytes |
+|---|---|---|
+| Home | 4.3 s / ~835 KB | 1.3 s / ~420 KB |
+| Shop | 1.3 s / ~735 KB | 1.3 s / ~420 KB |
+| Product | 1.4 s / ~810 KB | 1.4 s / ~530 KB (order form loads after the page) |
+| Checkout | 3.0 s, CLS 0.155 | 2.9 s, CLS 0.027 |
+
+What changed:
+- **Fonts 306 KB → 61 KB:** Latin-only variable fonts via `next/font/local` (preloaded, size-matched fallback); Bangla uses the phone's built-in Bengali font instead of downloading Hind Siliguri (3 weights × ~70 KB, pulled in on every page by the ৳ sign).
+- **Home hero visible without JavaScript:** entrance animations moved from JS (text started invisible until hydration) to CSS; headline only slides, never fades in.
+- **Prefetch on intent:** product links prefetch on hover/touch/focus instead of every link in view.
+- **Loaded later:** chat widget (browser idle), search with voice/photo (first open or idle), product-page order form (near view, Buy now, or idle).
+- **Favicon 110 KB → 5 KB.** Optimised images cached 30 days.
+- **Bug fix:** checkout re-requested a server quote about 4 times a second while open (each quote updated the cart, which triggered the next). Now one quote per real change.
+
+Still to check on the live site: hosting region. If the server functions run far from the database (e.g. US servers with a Singapore/Mumbai database), every uncached page waits several round trips. Put both in the same region (on Vercel: Project → Settings → Functions → Region, matching your Supabase region).

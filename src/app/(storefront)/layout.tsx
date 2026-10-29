@@ -4,7 +4,7 @@ import { Header } from "@/components/storefront/header";
 import { Footer } from "@/components/storefront/footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { MotionProvider } from "@/components/ui/motion-provider";
-import { ChatWidget } from "@/components/chat/chat-widget";
+import { LazyChat } from "@/components/chat/lazy-chat";
 import { Pixels } from "@/components/tracking/pixels";
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
@@ -21,9 +21,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <Suspense>
         <Pixels metaPixelId={process.env.META_PIXEL_ID || settings.tracking?.meta_pixel_id || null} tiktokPixelId={process.env.TIKTOK_PIXEL_ID || settings.tracking?.tiktok_pixel_id || null} server={settings.tracking?.server_events !== false} tiktokPurchase={settings.tracking?.tiktok_purchase_event === "CompletePayment" ? "CompletePayment" : "Purchase"} />
       </Suspense>
-      <Suspense>
-        <ChatWidget greeting="Hi! আমি ShopNear-এর সহকারী। Product, delivery বা order নিয়ে জিজ্ঞেস করুন।" />
-      </Suspense>
+      <LazyChat greeting="Hi! আমি ShopNear-এর সহকারী। Product, delivery বা order নিয়ে জিজ্ঞেস করুন।" />
     </MotionProvider>
   );
 }
