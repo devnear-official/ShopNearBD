@@ -25,14 +25,14 @@ export function Campaign({ title, body, collection, products }: { title: string;
         <div className="lg:sticky lg:top-28 lg:self-start">
           <Streaks tone="tangerine" className="h-6 w-12" />
           <p className="eyebrow mt-6 text-white/50">The edit · {products.length} pieces</p>
-          <h2 id="campaign-title" className="display mt-3 text-6xl sm:text-7xl">
+          <h2 id="campaign-title" className="display mt-3 t-page">
             {words.map((w, i) => (
               <m.span key={i} className="mr-3 inline-block" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08, duration: 0.6 }}>
                 {i === words.length - 1 ? <span className="text-tangerine">{w}</span> : w}
               </m.span>
             ))}
           </h2>
-          <p className="mt-6 max-w-md text-lg text-white/70">{body}</p>
+          <p className="mt-6 max-w-md text-base sm:text-lg text-white/70">{body}</p>
           <ButtonLink href={`/shop?collection=${collection}`} variant="tangerine" size="lg" className="mt-8">Shop the edit</ButtonLink>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:gap-6">

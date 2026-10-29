@@ -15,7 +15,7 @@ import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Stepper } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
 import { readAttribution, track } from "@/lib/tracking/client";
-import { Field, ManualPayment, METHOD_TITLE, METHODS, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
+import { Field, ManualPayment, METHOD_TITLE, METHODS, accountDelivery, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
 
 type Props = {
   product: ProductDetail; variant: Variant | undefined; onVariant: (v: Variant) => void;
@@ -64,6 +64,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
       const d = JSON.parse(localStorage.getItem("sn_delivery") ?? "null");
       const pickedDistrict = localStorage.getItem("sn_district");
       form.reset({ ...form.getValues(), ...(d ?? {}), ...(!d?.district && pickedDistrict && DISTRICTS.includes(pickedDistrict) ? { district: pickedDistrict } : {}) });
+      if (!d) void accountDelivery().then((a) => { if (a && !form.formState.isDirty) form.reset({ ...form.getValues(), ...a }); });
     } catch {}
   }, [form]);
 
@@ -128,7 +129,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
   if (soldOut) {
     return (
       <section id="order-now" aria-labelledby="qo-title" className="mt-16 scroll-mt-24 rounded-[2rem] bg-white p-6 text-center shadow-[var(--shadow-card)]">
-        <h2 id="qo-title" className="display text-3xl">Order this now</h2>
+        <h2 id="qo-title" className="display t-sub">Order this now</h2>
         <p className="mt-2 text-slate">This option is sold out. Pick another {product.option_names[0]?.toLowerCase() ?? "option"} above, or ask us on chat when it&apos;s back.</p>
       </section>
     );
@@ -140,7 +141,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
       <header className="relative overflow-hidden bg-ink px-5 py-6 text-white sm:px-8">
         <div aria-hidden className="absolute -right-16 -top-20 size-56 rounded-full bg-electric/50 blur-[70px]" />
         <p className="eyebrow relative text-tangerine">Single-page checkout</p>
-        <h2 id="qo-title" className="display relative mt-1 text-[clamp(2rem,5vw,3rem)]">Order this now</h2>
+        <h2 id="qo-title" className="display relative mt-1 t-section">Order this now</h2>
         <p className="bn relative text-white/75" lang="bn">এখানেই নাম, ফোন আর ঠিকানা দিয়ে অর্ডার করুন — অন্য পেজে যেতে হবে না।</p>
       </header>
 

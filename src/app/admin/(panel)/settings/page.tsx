@@ -7,13 +7,15 @@ import { Card, PageHeader } from "@/components/admin/ui";
 import { ActionForm, Field, Select, SubmitButton, TextArea } from "@/components/admin/form";
 import { sendTrackingTest } from "@/actions/admin-tracking";
 import { siteUrl } from "@/lib/env";
+import { smsProvider } from "@/lib/sms";
 import { Badge } from "@/components/admin/ui";
 import { saveSettings } from "@/actions/admin-settings";
 import { PasswordForm } from "./password-form";
 import type { HomepageSettings, PaymentSettings, PolicySettings, StoreSettings } from "@/lib/catalog";
 import type { ShippingSettings } from "@/lib/shipping";
 
-const TABS = [["store", "Store"], ["shipping", "Delivery"], ["payments", "Payments"], ["policies", "Policies"], ["homepage", "Homepage"], ["ai", "AI assistant"], ["tracking", "Ads tracking"], ["account", "Account"], ["audit", "Audit log"]] as const;
+const TABS = [["store", "Store"], ["shipping", "Delivery"], ["payments", "Payments"], ["policies", "Policies"], ["homepage", "Homepage"], ["ai", "AI assistant"], ["tracking", "Ads tracking"], ["sms", "Customer login (SMS)"], ["account", "Account"], ["audit", "Audit log"]] as const;
+type SmsRow = { id: number; phone_masked: string; purpose: string; provider: string; status: string; detail: string | null; created_at: Date };
 type TrackingRow = { id: number; platform: string; event_name: string; event_id: string; status: string; http_status: number | null; detail: string | null; test_mode: boolean; created_at: Date; order_number: string | null };
 type TrackingSettingsRow = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
 type AiSettings = { enabled: boolean; model: string; temperature: number; max_output_tokens: number; per_ip_per_minute: number; per_conversation_per_hour: number; retention_days: number; greeting: string };
@@ -22,12 +24,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const admin = await requireAdminPage();
   const requested = (await searchParams).tab;
   const tab = TABS.some(([k]) => k === requested) ? requested! : "store";
-  const [rows, audit, products, events] = await admin.db((tx) => Promise.all([
+  const [rows, audit, products, events, sms] = await admin.db((tx) => Promise.all([
     tx<{ key: string; value: Record<string, unknown>; updated_at: Date }[]>`select key, value, updated_at from public.site_settings`,
     tab === "audit" ? tx<{ id: number; actor_label: string; action: string; entity: string; entity_id: string | null; created_at: Date }[]>`select id, actor_label, action, entity, entity_id, created_at from public.audit_logs order by id desc limit 100` : Promise.resolve([]),
     tab === "homepage" ? tx<{ slug: string; name: string }[]>`select slug, name from public.products where status = 'published' order by name` : Promise.resolve([]),
     tab === "tracking" ? tx<TrackingRow[]>`select e.id, e.platform, e.event_name, e.event_id, e.status, e.http_status, e.detail, e.test_mode, e.created_at, o.order_number
       from public.tracking_events e left join public.orders o on o.id = e.order_id order by e.id desc limit 40` : Promise.resolve([] as TrackingRow[]),
+    tab === "sms" ? tx<SmsRow[]>`select id, phone_masked, purpose, provider, status, detail, created_at from public.sms_log order by id desc limit 40` : Promise.resolve([] as SmsRow[]),
   ]));
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value])) as Record<string, never>;
   const devDefaults = rows.filter((r) => (r.value as { dev_default?: boolean }).dev_default).map((r) => r.key);
@@ -48,6 +51,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "policies" && <PoliciesForm v={s.policies as PolicySettings} />}
       {tab === "homepage" && <HomepageForm v={s.homepage as HomepageSettings} products={products} />}
       {tab === "ai" && <AiForm v={s.ai as AiSettings} />}
+      {tab === "sms" && <SmsTab log={sms} />}
       {tab === "tracking" && <TrackingTab v={s.tracking as TrackingSettingsRow} secrets={s.tracking_secrets as Record<string, string> | undefined} events={events} />}
       {tab === "account" && <Card title="Change your password"><PasswordForm /><p className="mt-4 text-xs text-slate">Signed in as {admin.email}. Forgot it? Use “Forgot password” on the sign-in page.</p></Card>}
       {tab === "audit" && (
@@ -257,6 +261,40 @@ function TrackingTab({ v, secrets, events }: { v: TrackingSettingsRow; secrets?:
                 {e.order_number && <span className="text-slate">{e.order_number}</span>}
                 {e.test_mode && <Badge tone="amber">test</Badge>}
                 {e.detail && <span className="min-w-0 basis-full truncate text-xs text-slate sm:basis-auto sm:flex-1">{e.detail}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function SmsTab({ log }: { log: SmsRow[] }) {
+  const provider = smsProvider();
+  const label = provider === "bulksmsbd" ? `BulkSMSBD (sender ID ${process.env.BULKSMSBD_SENDER_ID})` : provider === "sslwireless" ? `SSL Wireless (SID ${process.env.SSL_SMS_SID})` : provider === "console" ? "Development outbox — no real SMS is sent" : null;
+  return (
+    <div className="space-y-4">
+      <Card title="Customer accounts">
+        <p className={clsx("rounded-2xl p-3 text-sm font-medium", provider && provider !== "console" ? "bg-mint/10 text-[#0b7a55]" : "bg-sun/20 text-[#7a4d05]")}>
+          {label ? `SMS gateway: ${label}.` : "No SMS gateway is configured, so customers can't log in yet (ordering and private order links still work)."}
+        </p>
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate">
+          <li>Every phone number that orders gets an account automatically. Customers log in at <span className="font-mono">/account/login</span> with a 6-digit code sent by SMS — no password — and see every order on their number, its status and their total.</li>
+          <li>Codes expire after 5 minutes and allow 5 tries. Limits: 1 code per number per minute, 5 per number and 10 per device per hour, 300 per hour store-wide (protects your SMS balance).</li>
+          <li>Set the gateway with environment variables on the server: <span className="font-mono">SMS_PROVIDER=bulksmsbd</span> + <span className="font-mono">BULKSMSBD_API_KEY</span>, <span className="font-mono">BULKSMSBD_SENDER_ID</span> — or <span className="font-mono">SMS_PROVIDER=sslwireless</span> + <span className="font-mono">SSL_SMS_API_TOKEN</span>, <span className="font-mono">SSL_SMS_SID</span>. Some gateways need your server&apos;s IP whitelisted.</li>
+        </ul>
+      </Card>
+      <Card title="Recent SMS">
+        {log.length === 0 ? <p className="text-sm text-slate">No SMS sent yet.</p> : (
+          <ul className="divide-y divide-line text-sm">
+            {log.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                <span className="w-32 text-xs text-slate">{formatDateTime(l.created_at)}</span>
+                <Badge tone={l.status === "sent" ? "green" : "red"}>{l.status}</Badge>
+                <span className="font-mono">{l.phone_masked}</span>
+                <span className="text-slate">{l.provider}</span>
+                {l.detail && <span className="min-w-0 basis-full truncate text-xs text-slate sm:basis-auto sm:flex-1">{l.detail}</span>}
               </li>
             ))}
           </ul>

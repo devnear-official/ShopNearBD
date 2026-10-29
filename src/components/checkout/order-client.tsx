@@ -22,9 +22,12 @@ export function TokenResolver({ number }: { number: string }) {
   if (!hydrated || hit) return <div className="skeleton h-72 rounded-[2rem]" />;
   return (
     <div className="rounded-[2rem] bg-white p-8 text-center shadow-[var(--shadow-card)]">
-      <h1 className="display text-4xl">Private order link needed</h1>
-      <p className="mx-auto mt-3 max-w-md text-slate">For your privacy we only show an order through the private link created when it was placed. It isn&apos;t saved on this device. Contact us with your order number and phone and we&apos;ll help.</p>
-      <Link href="/order" className="mt-6 inline-block font-semibold text-electric underline">Orders saved on this device</Link>
+      <h1 className="display t-section">Private order link needed</h1>
+      <p className="mx-auto mt-3 max-w-md text-slate">For your privacy we only show an order through the private link created when it was placed. It isn&apos;t saved on this device — log in with the phone number you ordered with to see it.</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link href={`/account/login?next=${encodeURIComponent(`/order/${number}`)}`} className="inline-flex min-h-10 items-center rounded-full bg-electric px-5 font-semibold text-white">Log in with your phone</Link>
+        <Link href="/order" className="inline-flex min-h-10 items-center font-semibold text-electric underline">Orders saved on this device</Link>
+      </div>
     </div>
   );
 }
@@ -77,7 +80,7 @@ export function PayLaterForm({ orderNumber, token, label, number, accountType, i
 export function ReviewForms({ orderNumber, token, items, reviewed }: { orderNumber: string; token: string; items: { id: string; name: string }[]; reviewed: string[] }) {
   return (
     <section aria-labelledby="rev" className="mt-8 rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
-      <h2 id="rev" className="display text-2xl">How was it?</h2>
+      <h2 id="rev" className="display t-card">How was it?</h2>
       <p className="mt-1 text-sm text-slate">Reviews from delivered orders help other shoppers. They are checked before they appear.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {items.map((i) => <ReviewForm key={i.id} orderNumber={orderNumber} token={token} productId={i.id} name={i.name} done={reviewed.includes(i.id)} />)}

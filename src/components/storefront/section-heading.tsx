@@ -5,8 +5,8 @@ export function SectionHeading({ eyebrow, title, bn, id, children }: { eyebrow: 
     <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
       <div>
         <p className="eyebrow flex items-center gap-3 text-electric"><Streaks className="h-3.5 w-7" />{eyebrow}</p>
-        <h2 id={id} className="display mt-3 text-[clamp(2.4rem,6vw,4.5rem)]">{title}</h2>
-        {bn && <p className="bn mt-1 text-lg text-slate" lang="bn">{bn}</p>}
+        <h2 id={id} className="display mt-3 t-section">{title}</h2>
+        {bn && <p className="bn mt-1 text-base sm:text-lg text-slate" lang="bn">{bn}</p>}
       </div>
       {children}
     </div>

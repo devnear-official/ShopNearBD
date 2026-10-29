@@ -6,6 +6,7 @@ import { Check, ExternalLink, MapPin, Package, Truck } from "lucide-react";
 import clsx from "clsx";
 import { asAnon } from "@/lib/db";
 import { sha256 } from "@/lib/tokens";
+import { ownOrderHash } from "@/lib/customer/auth";
 import { formatDateTime, formatTaka } from "@/lib/format";
 import { CUSTOMER_STATUS, METHOD_LABEL, PAYMENT_STATUS, PROGRESS } from "@/lib/order-status";
 import { getPublicSettings } from "@/lib/catalog";
@@ -37,17 +38,19 @@ export default function OrderPage(props: Params) {
 
 async function OrderView({ params, searchParams }: Params) {
   const [{ number }, sp] = await Promise.all([params, searchParams]);
-  const token = sp.t;
-  if (!token || !/^[A-Za-z0-9_-]{20,128}$/.test(token) || !/^SN\d{11}$/.test(number)) return <TokenResolver number={number} />;
-
-  const hash = sha256(token);
+  if (!/^SN\d{11}$/.test(number)) return <TokenResolver number={number} />;
+  const linkToken = sp.t && /^[A-Za-z0-9_-]{20,128}$/.test(sp.t) ? sp.t : null;
+  // Without the private link, a signed-in customer can open orders placed with their own phone number.
+  const hash = linkToken ? sha256(linkToken) : await ownOrderHash(number);
+  if (!hash) return <TokenResolver number={number} />;
+  const token = linkToken ?? "";
   const [row] = await asAnon((tx) => tx<{ o: PublicOrder | null; reviews: { product_id: string; status: string }[] }[]>`
     select public.get_order_public(${number}, ${hash}) as o, public.order_reviews(${number}, ${hash}) as reviews`);
   const o = row?.o;
   if (!o) {
     return (
       <div className="rounded-[2rem] bg-white p-8 text-center shadow-[var(--shadow-card)]">
-        <h1 className="display text-4xl">We couldn&apos;t open this order</h1>
+        <h1 className="display t-section">We couldn&apos;t open this order</h1>
         <p className="mx-auto mt-3 max-w-md text-slate">The link may be incomplete. For your privacy, orders open only with the private link from your confirmation page. Message us on chat or call support and we&apos;ll help.</p>
         <Link href="/order" className="mt-6 inline-block font-semibold text-electric underline">See orders saved on this device</Link>
       </div>
@@ -68,9 +71,9 @@ async function OrderView({ params, searchParams }: Params) {
       {fresh && <Celebrate />}
       <header className={clsx("relative overflow-hidden rounded-[2.5rem] p-6 sm:p-10", fresh ? "bg-ink text-white" : "bg-white shadow-[var(--shadow-card)]")}>
         <p className={clsx("eyebrow", fresh ? "text-sky" : "text-electric")}>Order {o.order_number}</p>
-        <h1 className="display mt-3 text-[clamp(2.6rem,7vw,4.8rem)]">{fresh ? "Thank you! Order received." : status.label}</h1>
-        <p className={clsx("bn mt-1 text-lg", fresh ? "text-white/70" : "text-slate")} lang="bn">{fresh ? "আপনার অর্ডার আমরা পেয়েছি" : status.bn}</p>
-        <p className={clsx("mt-4 max-w-2xl text-lg", fresh ? "text-white/85" : "text-ink-2")}>
+        <h1 className="display mt-3 t-page">{fresh ? "Thank you! Order received." : status.label}</h1>
+        <p className={clsx("bn mt-1 text-base sm:text-lg", fresh ? "text-white/70" : "text-slate")} lang="bn">{fresh ? "আপনার অর্ডার আমরা পেয়েছি" : status.bn}</p>
+        <p className={clsx("mt-4 max-w-2xl text-base sm:text-lg", fresh ? "text-white/85" : "text-ink-2")}>
           {fresh
             ? manual
               ? o.payment_status === "pending_verification"
@@ -102,7 +105,7 @@ async function OrderView({ params, searchParams }: Params) {
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section aria-labelledby="items" className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
-          <h2 id="items" className="display text-2xl">Items</h2>
+          <h2 id="items" className="display t-card">Items</h2>
           <ul className="mt-4 divide-y divide-line">
             {o.items.map((i, k) => (
               <li key={k} className="flex gap-3 py-3">
@@ -125,14 +128,14 @@ async function OrderView({ params, searchParams }: Params) {
 
         <div className="space-y-4">
           <section aria-labelledby="payment" className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
-            <h2 id="payment" className="display text-2xl">Payment</h2>
+            <h2 id="payment" className="display t-card">Payment</h2>
             <p className="mt-2 font-semibold">{METHOD_LABEL[o.payment_method]}</p>
             <p className={clsx("mt-2 inline-block rounded-full px-3 py-1 text-sm font-semibold", { neutral: "bg-cloud text-ink-2", warn: "bg-sun/20 text-[#7a4d05]", good: "bg-mint/15 text-[#0b7a55]", bad: "bg-flame/10 text-[#a3290f]" }[pay.tone])}>{pay.label}</p>
             {o.payments.filter((p) => p.transaction_id).map((p) => <p key={p.transaction_id} className="mt-2 text-sm text-slate">TrxID <span className="font-mono">{p.transaction_id}</span> · {p.status === "pending" ? "being checked" : p.status}</p>)}
             {canPayLater && payCfg && <PayLaterForm orderNumber={o.order_number} token={token} label={METHOD_LABEL[o.payment_method]} number={payCfg.number} accountType={payCfg.account_type} instructions={payCfg.instructions} amount={o.total} />}
           </section>
           <section aria-labelledby="delivery" className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
-            <h2 id="delivery" className="display text-2xl">Delivery</h2>
+            <h2 id="delivery" className="display t-card">Delivery</h2>
             <p className="mt-3 flex gap-2 text-sm"><MapPin className="mt-0.5 size-4 shrink-0 text-tangerine" /><span><b>{o.customer_name}</b> · {o.phone_masked}<br />{o.address}{o.area ? `, ${o.area}` : ""}, {o.district}</span></p>
             {o.shipment ? (
               <div className="mt-4 rounded-2xl bg-paper p-4 text-sm">

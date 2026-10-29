@@ -76,3 +76,11 @@ Server code switches to the `anon` or `authenticated` role inside each transacti
 - `tracking_events`: one row per server-side event per platform (sent / failed / skipped, HTTP status, short response detail, test mode). Admin-read only via RLS; kept 90 days.
 - Settings: `tracking` (public — pixel IDs, Purchase trigger, TikTok purchase event name, server-events switch) and `tracking_secrets` (private — access tokens and test event codes; never sent to the browser or the audit log).
 - `quote_cart` and `get_order_public` return item SKUs so browser events use the same content IDs as the server and the catalogue feed.
+
+## Customer accounts
+
+- `customer_accounts`: one row per phone number (`01XXXXXXXXX`), created when the phone first orders (`created_via = 'order'`, backfilled from existing orders) or first logs in. `verified_at` is set the first time the owner logs in with an SMS code. Orders are linked by phone, so all past orders appear after login.
+- `customer_otps`: login codes as keyed SHA-256 hashes with expiry (5 min), attempt counter (max 5) and single-use `consumed_at`.
+- `customer_sessions`: hashed session tokens (60 days) for the `sn_session` httpOnly cookie.
+- `sms_log`: masked number, gateway and response for every SMS; `dev_sms_outbox`: development/test-only stand-in for a real gateway.
+- All five tables have RLS on with no anon access; server code reaches them as the trusted role, and admins can read accounts and the SMS log. Cleanup cron removes old codes, expired sessions and old log rows.

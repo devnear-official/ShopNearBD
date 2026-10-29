@@ -46,9 +46,9 @@ export function Spotlight({ product, specs }: { product: ProductCard; specs: { l
       </div>
       <div>
         <p className="eyebrow text-tangerine">Spotlight · {product.category?.name}</p>
-        <h3 className="display mt-3 text-5xl sm:text-6xl">{product.name}</h3>
-        {product.name_bn && <p className="bn mt-2 text-lg text-slate" lang="bn">{product.name_bn}</p>}
-        <p className="mt-5 max-w-lg text-lg text-slate">{product.short_description}</p>
+        <h3 className="display mt-3 t-page">{product.name}</h3>
+        {product.name_bn && <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">{product.name_bn}</p>}
+        <p className="mt-5 max-w-lg text-base sm:text-lg text-slate">{product.short_description}</p>
         <dl className="mt-6 grid max-w-lg grid-cols-2 gap-2">
           {specs.slice(0, 4).map((s) => (
             <div key={s.label} className="rounded-2xl bg-white p-3 shadow-[var(--shadow-card)]">
