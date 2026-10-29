@@ -37,7 +37,7 @@ export type HomepageSettings = {
 export type PublicSettings = { store: StoreSettings; shipping: ShippingSettings; payments: PaymentSettings; policies: PolicySettings; homepage: HomepageSettings };
 
 /** Card columns + aggregated images/variants in one round trip. */
-const cardSelect = (tx: Tx) => tx`
+export const cardSelect = (tx: Tx) => tx`
   p.id, p.slug, p.name, p.name_bn, p.short_description, p.price, p.sale_price, p.is_featured, p.sold_count,
   p.created_at, p.option_names, p.low_stock_threshold,
   (select json_build_object('slug', c.slug, 'name', c.name) from public.categories c where c.id = p.category_id) as category,
@@ -48,7 +48,7 @@ const cardSelect = (tx: Tx) => tx`
             from public.product_variants v where v.product_id = p.id and v.is_active), '[]') as variants,
   pr.min_price, pr.total_stock`;
 
-const priceJoin = (tx: Tx) => tx`
+export const priceJoin = (tx: Tx) => tx`
   cross join lateral (
     select coalesce(min(public.variant_unit_price(p, v)), coalesce(p.sale_price, p.price)) as min_price,
            coalesce(sum(v.stock), 0)::int as total_stock
