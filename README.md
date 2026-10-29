@@ -15,6 +15,7 @@ A complete e-commerce platform for a Bangladesh-based shop: an art-directed stor
 - `/shop/[slug]`: gallery (scroll-through on desktop, swipe on phones) with full-screen zoom, option selectors with live price/stock, quantity, Add to bag / Buy now, a delivery estimator by district, specs, policies, verified-buyer reviews, related and recently viewed products, sticky purchase bar on phones, Product + Breadcrumb JSON-LD. `/shop/<uuid>` redirects to the slug.
 - Cart drawer, 3-step checkout (delivery → payment → review) with server-side pricing, coupon codes, Dhaka/suburbs/outside-Dhaka zones and 64 districts, Cash on Delivery, and manual bKash/Nagad (pay now with TrxID/screenshot, or pay later from the order page).
 - Private order pages (`/order/SN…?t=<secret>`) with a status timeline, payment status, courier tracking and review forms after delivery.
+- Guest wishlist (♡ on cards and product pages, `/wishlist`), kept on the device; prices shown are live.
 - Floating support chat (Bangla, Banglish, English) with human hand-off.
 - Mobile-first, keyboard accessible, `prefers-reduced-motion` respected, no horizontal overflow from 320 px to 1920 px.
 
@@ -186,6 +187,12 @@ The responsive suite visits storefront and admin pages at 320, 360, 375, 390, 43
 Public catalogue pages are prerendered and revalidated (`use cache` with `cacheLife`, invalidated by `updateTag` when admins save products, categories or settings). Cart, checkout, order and admin data are never cached.
 
 ---
+
+## Known limitations
+
+- **Customer accounts are not built.** Checkout is guest-only (the norm for COD shops in Bangladesh); carts and wishlists live in the browser, and orders are opened with their private link. The database already has `carts`, `cart_items`, `wishlists` and owner-only RLS policies, so sign-in, a server-side cart and cart merging can be added without schema changes.
+- Courier adapters are untested against live APIs (see Couriers). Payment gateways are not integrated (manual verification only).
+- Filtered `/shop` URLs are render-bound at ~50 req/s per server instance on the test machine — see [docs/performance.md](docs/performance.md).
 
 ## Still needed from the business before launch
 

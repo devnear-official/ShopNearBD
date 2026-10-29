@@ -101,3 +101,12 @@ test("support chat answers from store data and fits the screen", async ({ page }
   await chat.getByRole("button", { name: "Close chat" }).click();
   await expect(chat).toBeHidden();
 });
+
+test("guest wishlist saves products on this device", async ({ page }) => {
+  await page.goto("/shop/fit-band-7", { waitUntil: "load" });
+  await page.getByRole("button", { name: /Save Fit Band 7 to wishlist/ }).first().click();
+  await page.goto("/wishlist");
+  await expect(page.locator("article h3", { hasText: "Fit Band 7" })).toBeVisible();
+  await page.getByRole("button", { name: /Remove Fit Band 7 from wishlist/ }).click();
+  await expect(page.getByText("Nothing saved yet")).toBeVisible();
+});

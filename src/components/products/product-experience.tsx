@@ -17,6 +17,7 @@ import { Stepper } from "@/components/cart/cart-drawer";
 import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "./product-gallery";
+import { WishlistButton } from "./wishlist";
 
 export function ProductExperience({ product, shipping, payments, children }: { product: ProductDetail; shipping: ShippingSettings; payments: PaymentSettings; children?: React.ReactNode }) {
   const router = useRouter();
@@ -138,9 +139,10 @@ export function ProductExperience({ product, shipping, payments, children }: { p
             <Button size="lg" onClick={() => add()} disabled={stock <= 0} className="flex-1 sm:flex-none">
               {added ? <><Check className="size-5" /> Added to bag</> : <><ShoppingBag className="size-5" /> Add to bag</>}
             </Button>
-            <Button size="lg" variant="dark" onClick={() => add(true)} disabled={stock <= 0} className="w-full sm:w-auto">
+            <Button size="lg" variant="dark" onClick={() => add(true)} disabled={stock <= 0} className="flex-1 sm:flex-none">
               <Zap className="size-5" /> Buy now
             </Button>
+            <WishlistButton slug={product.slug} name={product.name} withLabel />
           </div>
           {stock <= 0 && <p className="mt-3 text-sm text-slate">This option is sold out. Try another option or ask us on chat when it&apos;s back.</p>}
 

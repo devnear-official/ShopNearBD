@@ -10,6 +10,7 @@ import { compareAtPrice, unitPrice } from "@/lib/pricing";
 import { formatTaka, percentOff } from "@/lib/format";
 import { swatch, isLight } from "@/lib/colors";
 import { cart } from "@/components/cart/cart-store";
+import { WishlistButton } from "./wishlist";
 
 /**
  * The "tag card": a product card cut like a shopping tag (punched eyelet,
@@ -69,7 +70,7 @@ export function ProductCard({ product, priority, className, tone = "light", larg
           </span>
 
           {off ? (
-            <span className="absolute right-3 top-3 origin-top-right rotate-3 rounded-xl rounded-tr-sm bg-tangerine px-2.5 py-1 text-xs font-extrabold text-ink shadow-md transition-transform duration-500 group-hover/card:rotate-[-4deg]">
+            <span className="absolute right-[3.6rem] top-3.5 origin-top-right rotate-3 rounded-xl rounded-tr-sm bg-tangerine px-2.5 py-1 text-xs font-extrabold text-ink shadow-md transition-transform duration-500 group-hover/card:rotate-[-4deg]">
               −{off}%
             </span>
           ) : null}
@@ -83,6 +84,7 @@ export function ProductCard({ product, priority, className, tone = "light", larg
         </div>
       </Link>
 
+      <WishlistButton slug={product.slug} name={product.name} className="absolute right-2.5 top-2.5 z-10" />
       {/* Quick add sits outside the link so it never triggers navigation. */}
       <button
         type="button"

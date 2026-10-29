@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Menu, Search, ShoppingBag, X, PackageSearch, ArrowUpRight } from "lucide-react";
+import { Menu, Search, ShoppingBag, X, PackageSearch, ArrowUpRight, Heart } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";
 import { Streaks } from "@/components/ui/streaks";
@@ -104,6 +104,9 @@ export function Header({ categories }: { categories: Cat[] }) {
               <kbd className="rounded-md bg-white px-1.5 text-xs text-mist">/</kbd>
             </button>
             <IconButton label="Search products" onClick={() => setSearch(true)} className="md:hidden"><Search className="size-5" /></IconButton>
+            <Link href="/wishlist" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Wishlist" title="Wishlist">
+              <Heart className="size-5" />
+            </Link>
             <Link href="/order" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Track your orders" title="Track your orders">
               <PackageSearch className="size-5" />
             </Link>
@@ -162,6 +165,7 @@ export function Header({ categories }: { categories: Cat[] }) {
               <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
                 <Link href="/order" className="rounded-2xl bg-white/10 p-4 font-semibold">Track my order</Link>
                 <Link href="/help" className="rounded-2xl bg-white/10 p-4 font-semibold">Help & policies</Link>
+                <Link href="/wishlist" className="rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist</Link>
               </div>
               <Streaks tone="light" className="mt-10 h-8 w-16 opacity-60" />
             </nav>
