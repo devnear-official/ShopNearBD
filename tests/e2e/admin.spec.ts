@@ -42,8 +42,14 @@ test("admin creates a product with an uploaded image and publishes it", async ({
   await page.getByLabel("Status").selectOption("published");
   await page.getByRole("button", { name: "Save product" }).click();
   await page.waitForURL(/\/admin\/products\/[0-9a-f-]{36}$/, { timeout: 20000 });
+  const adminUrl = page.url();
   await page.goto(`/shop/${slug}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("E2E Travel Lamp");
   await expect(page.getByText("৳1,290").first()).toBeVisible();
+  // Clean up: archive it again so test products don't linger in the catalogue.
+  await page.goto(adminUrl);
+  await page.getByLabel("Status").selectOption("archived");
+  await page.getByRole("button", { name: "Save product" }).click();
+  await expect(page.getByText("Product saved.")).toBeVisible();
 });
 });

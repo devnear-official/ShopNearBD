@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Banknote, Check, ChevronDown, ChevronLeft, Loader2, Lock, ShieldAlert, Smartphone, Tag, Upload } from "lucide-react";
+import { AlertTriangle, Banknote, Check, ChevronDown, ChevronLeft, Loader2, Lock, MessageCircle, ShieldAlert, Smartphone, Tag, Upload } from "lucide-react";
 import clsx from "clsx";
 import { cart, useCart } from "@/components/cart/cart-store";
 import { deliverySchema, type DeliveryInput } from "@/lib/validation/checkout";
@@ -221,6 +221,9 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           })}
         </ol>
 
+        <button type="button" onClick={() => window.dispatchEvent(new Event("sn:open-chat"))} className="mb-4 flex min-h-10 items-center gap-2 text-sm font-semibold text-electric sm:hidden">
+          <MessageCircle className="size-4" /> Need help? Chat with us
+        </button>
         <details className="mb-6 rounded-[1.5rem] bg-white shadow-[var(--shadow-card)] lg:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between p-4 font-semibold">
             <span>Order summary ({state.items.length})</span>

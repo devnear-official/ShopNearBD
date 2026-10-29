@@ -9,7 +9,7 @@ export function Logo({ tone = "light", className, priority }: { tone?: "light" |
       width={640}
       height={184}
       priority={priority}
-      className={clsx("w-auto max-w-none shrink-0 self-start object-contain", className)}
+      className={clsx("w-auto max-w-none shrink-0 object-contain", className)}
     />
   );
 }

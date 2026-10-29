@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { ArrowUp, Headset, Loader2, X } from "lucide-react";
@@ -26,6 +27,8 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
   const lastId = useRef(0);
   const list = useRef<HTMLDivElement>(null);
   const ref = useDialog<HTMLDivElement>(open, () => setOpen(false));
+  // On the phone checkout the floating button would sit over form fields; checkout offers its own help button instead.
+  const onCheckout = usePathname().startsWith("/checkout");
 
   const merge = useCallback((incoming: Msg[]) => {
     if (!incoming.length) return;
@@ -54,6 +57,7 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
     }
   }, [merge]);
 
+  const openChatRef = useRef<() => void>(() => {});
   const openChat = () => {
     setOpen(true);
     setUnread(false);
@@ -63,6 +67,9 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
       void poll();
     }
   };
+  useEffect(() => {
+    openChatRef.current = openChat;
+  });
 
   // While a person is handling the chat, check for their replies.
   useEffect(() => {
@@ -70,6 +77,13 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
     const t = setInterval(() => void poll(), open ? 5000 : 30000);
     return () => clearInterval(t);
   }, [mode, open, poll]);
+
+  // Other components can open the chat (e.g. the help button on checkout).
+  useEffect(() => {
+    const onOpen = () => openChatRef.current();
+    window.addEventListener("sn:open-chat", onOpen);
+    return () => window.removeEventListener("sn:open-chat", onOpen);
+  }, []);
 
   useEffect(() => {
     list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" });
@@ -113,7 +127,7 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
             initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
             aria-label={unread ? "Open chat — new reply from our team" : "Chat with us"}
-            className="group fixed right-4 z-40 flex h-14 items-center gap-2 rounded-full bg-ink pl-2 pr-2 text-white shadow-[0_18px_40px_-14px_rgba(11,21,48,.7)] sm:pr-5"
+            className={clsx("group fixed right-4 z-40 h-14 items-center gap-2 rounded-full bg-ink pl-2 pr-2 text-white shadow-[0_18px_40px_-14px_rgba(11,21,48,.7)] sm:flex sm:pr-5", onCheckout ? "hidden" : "flex")}
             style={{ bottom: "calc(1rem + env(safe-area-inset-bottom) + var(--sticky-bar, 0px))" }}
           >
             <span className="relative grid size-10 place-items-center rounded-full bg-gradient-to-br from-tangerine to-flame">
