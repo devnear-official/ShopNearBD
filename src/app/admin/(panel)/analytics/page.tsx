@@ -4,12 +4,14 @@ import { formatTaka } from "@/lib/format";
 import { Card, PageHeader, Stat } from "@/components/admin/ui";
 import { DailyBars } from "@/components/admin/charts";
 
+const CHANNEL_LABEL: Record<string, string> = { facebook: "Facebook/Instagram", tiktok: "TikTok", google: "Google", utm_source: "Tagged link", referral: "Referral", direct: "Direct" };
+
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const admin = await requireAdminPage();
   const range = [7, 30, 90, 365].includes(Number((await searchParams).range)) ? Number((await searchParams).range) : 30;
   const to = new Date();
   const from = new Date(to.getTime() - range * 86400000);
-  const [summary, daily, byMethod, byCategory, byZone, coupons, ai] = await admin.db((tx) => Promise.all([
+  const [summary, daily, byMethod, byCategory, byZone, coupons, ai, byChannel] = await admin.db((tx) => Promise.all([
     tx<{ orders: number; placed_value: number; delivered: number; delivered_value: number; cancelled: number; returned: number; customers: number; repeat_customers: number; units: number; gross_profit: number | null }[]>`
       with o as (select * from public.orders where created_at between ${from} and ${to})
       select count(*)::int as orders, coalesce(sum(total) filter (where status <> 'cancelled'), 0) as placed_value,
@@ -26,6 +28,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     tx<{ zone: string; n: number; delivered: number; returned: number }[]>`select zone, count(*)::int as n, count(*) filter (where status = 'delivered')::int as delivered, count(*) filter (where status = 'returned')::int as returned from public.orders where created_at between ${from} and ${to} group by 1 order by 2 desc`,
     tx<{ code: string; uses: number; discount: number }[]>`select c.code, count(r.*)::int as uses, coalesce(sum(r.amount), 0) as discount from public.coupon_redemptions r join public.coupons c on c.id = r.coupon_id where r.created_at between ${from} and ${to} group by 1 order by 2 desc limit 8`,
     tx<{ calls: number; failures: number; avg_ms: number | null; tokens: number | null }[]>`select count(*)::int as calls, count(*) filter (where not ok)::int as failures, avg(latency_ms)::int as avg_ms, sum(coalesce(input_tokens, 0) + coalesce(output_tokens, 0))::int as tokens from public.ai_usage where created_at between ${from} and ${to}`,
+    tx<{ channel: string; campaign: string | null; n: number; delivered: number; value: number }[]>`
+      select coalesce(nullif(attribution ->> 'channel', ''), 'direct') as channel, nullif(attribution ->> 'utm_campaign', '') as campaign, count(*)::int as n,
+        count(*) filter (where status = 'delivered')::int as delivered, coalesce(sum(total) filter (where status <> 'cancelled'), 0) as value
+      from public.orders where created_at between ${from} and ${to} group by 1, 2 order by 5 desc limit 12`,
   ]));
   const s = summary[0];
   const valid = s.orders - s.cancelled;
@@ -50,6 +56,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <Card title="Payment methods"><Bars rows={byMethod.map((m) => ({ label: methodLabel[m.method] ?? m.method, value: m.value, sub: `${m.n} orders` }))} /></Card>
         <Card title="Sales by category"><Bars rows={byCategory.map((c) => ({ label: c.name, value: c.value, sub: `${c.units} units` }))} /></Card>
         <Card title="Delivery zones"><ul className="space-y-2 text-sm">{byZone.map((z) => <li key={z.zone} className="flex justify-between"><span className="capitalize">{z.zone.replace(/_/g, " ")}</span><span>{z.n} orders · {pct(z.delivered, z.delivered + z.returned)} delivered</span></li>)}</ul></Card>
+        <Card title="Orders by source (ads)">
+          {byChannel.length ? <Bars rows={byChannel.map((c) => ({ label: `${CHANNEL_LABEL[c.channel] ?? c.channel}${c.campaign ? ` · ${c.campaign}` : ""}`, value: Number(c.value), sub: `${c.n} orders · ${c.delivered} delivered` }))} /> : <p className="text-sm text-slate">No orders in this period.</p>}
+        </Card>
         <Card title="Coupons used"><ul className="space-y-2 text-sm">{coupons.length ? coupons.map((c) => <li key={c.code} className="flex justify-between"><span className="font-mono">{c.code}</span><span>{c.uses} uses · {formatTaka(c.discount)}</span></li>) : <li className="text-slate">No coupon use in this period.</li>}</ul></Card>
       </div>
     </>

@@ -6,6 +6,7 @@ import { parseShopParams, shopHref, type ShopSearchParams } from "@/lib/shop-par
 import { ProductGrid, ProductGridSkeleton, Pagination } from "@/components/products/product-grid";
 import { ShopFilters } from "@/components/products/shop-filters";
 import { Streaks } from "@/components/ui/streaks";
+import { TrackSearch } from "@/components/tracking/track-search";
 
 export const metadata: Metadata = {
   title: "Shop all products",
@@ -37,6 +38,7 @@ async function Results({ searchParams }: { searchParams: Promise<ShopSearchParam
   return (
     <>
       <ShopFilters query={query} categories={categories} total={total} />
+      {query.q && <TrackSearch q={query.q} results={total} />}
       {cat && (
         <div className="mb-2 mt-6 rounded-[2rem] p-6 text-white" style={{ background: cat.accent ?? "#1E6BFF" }}>
           <h2 className="display text-4xl">{cat.name} {cat.name_bn && <span className="bn ml-2 text-2xl font-semibold opacity-80" lang="bn">{cat.name_bn}</span>}</h2>

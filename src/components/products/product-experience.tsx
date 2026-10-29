@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { Banknote, Check, MapPin, ShieldCheck, ShoppingBag, Smartphone, Truck, Zap } from "lucide-react";
@@ -18,16 +17,19 @@ import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "./product-gallery";
 import { WishlistButton } from "./wishlist";
+import { track } from "@/lib/tracking/client";
+import { QuickOrder } from "@/components/checkout/quick-order";
 
 export function ProductExperience({ product, shipping, payments, children }: { product: ProductDetail; shipping: ShippingSettings; payments: PaymentSettings; children?: React.ReactNode }) {
-  const router = useRouter();
   const options = product.option_names.filter((n) => product.variants.some((v) => v.options[n]));
   const initial = product.variants.find((v) => v.stock > 0) ?? product.variants[0];
   const [selected, setSelected] = useState<Record<string, string>>(() => ({ ...(initial?.options ?? {}) }));
   const [qtyInput, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const buttons = useRef<HTMLDivElement>(null);
-  const [showBar, setShowBar] = useState(false);
+  const [pastButtons, setPastButtons] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const showBar = pastButtons && !formVisible;
 
   const variant: Variant | undefined = useMemo(
     () => (options.length ? product.variants.find((v) => options.every((o) => v.options[o] === selected[o])) : product.variants[0]) ?? initial,
@@ -40,6 +42,12 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   const maxQty = Math.min(20, stock);
   // Derived, so switching to a variant with less stock never leaves an impossible quantity.
   const qty = Math.max(1, Math.min(qtyInput, Math.max(1, maxQty)));
+
+  // Ads: one ViewContent per product page view.
+  useEffect(() => {
+    track("ViewContent", { value: price, items: [{ id: variant?.sku ?? product.sku, name: product.name, quantity: 1, price, category: product.category?.name }] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once per product, not per variant change
+  }, [product.id]);
 
   // Remember for "recently viewed".
   useEffect(() => {
@@ -55,25 +63,37 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   useEffect(() => {
     const el = buttons.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setShowBar(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    const io = new IntersectionObserver(([e]) => setPastButtons(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
     io.observe(el);
-    return () => io.disconnect();
+    const form = document.getElementById("order-now");
+    const io2 = new IntersectionObserver(([e]) => setFormVisible(e.isIntersecting), { threshold: 0 });
+    if (form) io2.observe(form);
+    return () => { io.disconnect(); io2.disconnect(); };
   }, []);
+  // While the order form is on a phone screen, the floating chat button would cover fields.
+  useEffect(() => {
+    document.documentElement.dataset.quickOrder = formVisible ? "1" : "";
+    return () => { document.documentElement.dataset.quickOrder = ""; };
+  }, [formVisible]);
   useEffect(() => {
     document.documentElement.style.setProperty("--sticky-bar", showBar ? "84px" : "0px");
     return () => document.documentElement.style.setProperty("--sticky-bar", "0px");
   }, [showBar]);
 
-  const add = (go?: boolean) => {
+  const add = () => {
     if (!variant || stock <= 0) return;
     const img = product.images.find((i) => i.variant_id === variant.id) ?? product.images[0];
-    cart.add({ variantId: variant.id, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: stock }, qty);
-    if (go) {
-      router.push("/checkout");
-      return;
-    }
+    cart.add({ variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: stock }, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
+  };
+
+  /** "Buy now" opens the single-page checkout right here instead of leaving the page. */
+  const buyNow = () => {
+    const el = document.getElementById("order-now");
+    if (!el) return;
+    el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    setTimeout(() => (document.getElementById("qo-name") as HTMLInputElement | null)?.focus({ preventScroll: true }), 450);
   };
 
   const valueState = (name: string, value: string) => {
@@ -139,7 +159,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
             <Button size="lg" onClick={() => add()} disabled={stock <= 0} className="flex-1 sm:flex-none">
               {added ? <><Check className="size-5" /> Added to bag</> : <><ShoppingBag className="size-5" /> Add to bag</>}
             </Button>
-            <Button size="lg" variant="dark" onClick={() => add(true)} disabled={stock <= 0} className="flex-1 sm:flex-none">
+            <Button size="lg" variant="dark" onClick={buyNow} disabled={stock <= 0} className="flex-1 sm:flex-none" aria-controls="order-now">
               <Zap className="size-5" /> Buy now
             </Button>
             <WishlistButton slug={product.slug} name={product.name} withLabel />
@@ -159,6 +179,11 @@ export function ProductExperience({ product, shipping, payments, children }: { p
         </div>
       </div>
 
+      <QuickOrder
+        product={product} variant={variant} onVariant={(v) => setSelected({ ...v.options })}
+        qty={qty} maxQty={maxQty} onQty={setQty} price={price} shipping={shipping} payments={payments}
+      />
+
       <AnimatePresence>
         {showBar && (
           <m.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} transition={{ type: "spring", stiffness: 400, damping: 36 }}
@@ -170,7 +195,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
                 <p className="font-display font-bold">{formatTaka(price)}</p>
               </div>
               <Button size="md" onClick={() => add()} disabled={stock <= 0}>{added ? <Check className="size-5" /> : <ShoppingBag className="size-5" />}<span className="sr-only sm:not-sr-only">Add</span></Button>
-              <Button size="md" variant="dark" onClick={() => add(true)} disabled={stock <= 0}>Buy now</Button>
+              <Button size="md" variant="dark" onClick={buyNow} disabled={stock <= 0} aria-controls="order-now">Buy now</Button>
             </div>
           </m.div>
         )}

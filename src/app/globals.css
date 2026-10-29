@@ -170,3 +170,8 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Phones: hide the floating chat button while the product-page order form is on screen. */
+@media (max-width: 639px) {
+  html[data-quick-order="1"] [data-chat-launcher] { display: none; }
+}

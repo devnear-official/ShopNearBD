@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Banknote, Check, ChevronDown, ChevronLeft, Loader2, Lock, MessageCircle, ShieldAlert, Smartphone, Tag, Upload } from "lucide-react";
+import { AlertTriangle, Banknote, Check, ChevronDown, ChevronLeft, Loader2, Lock, MessageCircle, Smartphone, Tag } from "lucide-react";
 import clsx from "clsx";
 import { cart, useCart } from "@/components/cart/cart-store";
 import { deliverySchema, type DeliveryInput } from "@/lib/validation/checkout";
@@ -13,18 +13,11 @@ import { normalizeBdPhone } from "@/lib/validation/common";
 import { DISTRICTS, zonesForDistrict, type ShippingSettings } from "@/lib/shipping";
 import type { PaymentSettings } from "@/lib/catalog";
 import { formatTaka } from "@/lib/format";
-import { placeOrder, quoteCart, uploadPaymentProof, type Quote } from "@/actions/checkout";
+import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Streaks } from "@/components/ui/streaks";
-
-type Method = "cod" | "bkash_manual" | "nagad_manual";
-type Keys = { idempotencyKey: string; accessToken: string };
-
-function newKeys(): Keys {
-  const b = crypto.getRandomValues(new Uint8Array(32));
-  const token = btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return { idempotencyKey: crypto.randomUUID() + "-" + Date.now().toString(36), accessToken: token };
-}
+import { Field, ManualPayment, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
+import { readAttribution, track } from "@/lib/tracking/client";
 
 export function Checkout({ shipping, payments }: { shipping: ShippingSettings; payments: PaymentSettings }) {
   const router = useRouter();
@@ -45,6 +38,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
   const [placing, setPlacing] = useState(false);
   const [quoting, startQuote] = useTransition();
   const keys = useRef<Keys | null>(null);
+  const initiated = useRef(false);
   const top = useRef<HTMLDivElement>(null);
 
   const form = useForm<DeliveryInput>({ resolver: zodResolver(deliverySchema), mode: "onTouched", defaultValues: { name: "", phone: "", email: "", district: "", zone: "", area: "", address: "", note: "" } });
@@ -78,6 +72,10 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
         setQuote(r.quote);
         setQuoteError(null);
         cart.reconcile(r.quote.lines);
+        if (!initiated.current && r.quote.lines.length) {
+          initiated.current = true;
+          track("InitiateCheckout", { value: r.quote.subtotal, items: r.quote.lines.map((l) => ({ id: l.sku ?? l.variant_id, name: l.name, quantity: l.quantity, price: l.unit_price })) });
+        }
       } else setQuoteError(r.error);
     });
   }, [items, district, zone, appliedCoupon, phone]);
@@ -104,12 +102,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     })(e);
 
   const validatePayment = () => {
-    const errs: Record<string, string> = {};
-    if (!method) errs.method = "Choose a payment method";
-    if (method && method !== "cod" && !payLater) {
-      if (!/^(\+?88)?01[3-9]\d{8}$/.test(sender.replace(/[\s-]/g, ""))) errs.sender = "Enter the number you paid from";
-      if (!/^[A-Za-z0-9]{6,20}$/.test(txid.trim())) errs.txid = "Enter the Transaction ID from the SMS";
-    }
+    const errs = validateManual(method, payLater, sender, txid);
     setPayErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -127,15 +120,13 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
       idempotencyKey: keys.current.idempotencyKey,
       accessToken: keys.current.accessToken,
       proofPath: proof?.path,
+      attribution: readAttribution(),
     });
     if (res.ok) {
-      try {
-        const saved = JSON.parse(localStorage.getItem("sn_orders") ?? "[]");
-        localStorage.setItem("sn_orders", JSON.stringify([{ number: res.orderNumber, token: res.token, total: res.total, at: new Date().toISOString() }, ...saved].slice(0, 20)));
-        sessionStorage.removeItem("sn_checkout");
-      } catch {}
+      rememberOrder(res);
+      try { sessionStorage.removeItem("sn_checkout"); } catch {}
       cart.clear();
-      router.replace(`/order/${res.orderNumber}?t=${encodeURIComponent(res.token)}&new=1`);
+      router.replace(`/order/${res.orderNumber}/thank-you?t=${encodeURIComponent(res.token)}`);
       return;
     }
     setPlacing(false);
@@ -315,7 +306,11 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Button type="button" variant="ghost" size="lg" onClick={() => goTo(1)}><ChevronLeft className="size-5" /> Back</Button>
-              <Button type="button" size="lg" onClick={() => validatePayment() && goTo(3)}>Review order</Button>
+              <Button type="button" size="lg" onClick={() => {
+                if (!validatePayment()) return;
+                track("AddPaymentInfo", { value: quote?.total, items: quote?.lines.map((l) => ({ id: l.sku ?? l.variant_id, name: l.name, quantity: l.quantity, price: l.unit_price })) });
+                goTo(3);
+              }}>Review order</Button>
             </div>
           </div>
         )}
@@ -360,75 +355,6 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
   );
 }
 
-function ManualPayment(props: {
-  cfg: PaymentSettings["bkash_manual"]; label: string; total: number | null;
-  payLater: boolean; setPayLater: (v: boolean) => void; sender: string; setSender: (v: string) => void; txid: string; setTxid: (v: string) => void;
-  proof: { path: string; name: string } | null; setProof: (v: { path: string; name: string } | null) => void; errors: Record<string, string>;
-}) {
-  const { cfg, label, total, payLater, setPayLater, sender, setSender, txid, setTxid, proof, setProof, errors } = props;
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  return (
-    <div className="mt-6 rounded-[1.5rem] bg-paper p-5">
-      <p className="flex items-start gap-2 rounded-xl bg-sun/20 p-3 text-sm font-medium text-[#7a4d05]">
-        <ShieldAlert className="mt-0.5 size-4 shrink-0" /> We will never ask for your {label} PIN or OTP. Never share them with anyone, including us.
-      </p>
-      <ol className="mt-4 space-y-2 text-sm">
-        <li>1. {cfg.instructions}</li>
-        <li>2. Our {label} number ({cfg.account_type}): <b className="font-mono text-base tracking-wide">{cfg.number}</b></li>
-        <li>3. Amount: <b>{total !== null ? formatTaka(total) : "shown after you choose your district"}</b></li>
-      </ol>
-      <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="When will you pay?">
-        <button type="button" role="radio" aria-checked={!payLater} onClick={() => setPayLater(false)} className={clsx("h-10 rounded-full px-4 text-sm font-semibold", !payLater ? "bg-ink text-white" : "bg-white ring-1 ring-line")}>I&apos;ve paid — enter details</button>
-        <button type="button" role="radio" aria-checked={payLater} onClick={() => setPayLater(true)} className={clsx("h-10 rounded-full px-4 text-sm font-semibold", payLater ? "bg-ink text-white" : "bg-white ring-1 ring-line")}>I&apos;ll pay after ordering</button>
-      </div>
-      {!payLater && (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label={`Your ${label} number`} error={errors.sender}>
-            <input value={sender} onChange={(e) => setSender(e.target.value)} type="tel" inputMode="tel" placeholder="01XXXXXXXXX" className="input" aria-invalid={!!errors.sender} />
-          </Field>
-          <Field label="Transaction ID (TrxID)" error={errors.txid}>
-            <input value={txid} onChange={(e) => setTxid(e.target.value.replace(/\s/g, ""))} placeholder="e.g. 9JK4L2M8QA" className="input font-mono uppercase" autoCapitalize="characters" aria-invalid={!!errors.txid} />
-          </Field>
-          <div className="sm:col-span-2">
-            <label className="flex w-max cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold ring-1 ring-line">
-              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-              {proof ? `Screenshot: ${proof.name}` : "Attach screenshot (optional)"}
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setUploading(true);
-                setUploadError(null);
-                const fd = new FormData();
-                fd.set("file", f);
-                const r = await uploadPaymentProof(fd);
-                setUploading(false);
-                if (r.ok) setProof({ path: r.path, name: f.name });
-                else setUploadError(r.error);
-              }} />
-            </label>
-            {uploadError && <p className="field-error">{uploadError}</p>}
-          </div>
-        </div>
-      )}
-      <p className="mt-4 text-xs text-slate">A Transaction ID or screenshot is not proof of payment on its own — our team checks it against our {label} account and then confirms your order.</p>
-    </div>
-  );
-}
-
-function Field({ label, hint, error, className, children }: { label: string; hint?: string; error?: string; className?: string; children: React.ReactNode }) {
-  return (
-    <div className={className}>
-      <label className="label">
-        {label}
-        {hint && <span className="ml-1 font-normal text-mist">· {hint}</span>}
-        <span className="mt-1.5 block font-normal">{children}</span>
-      </label>
-      {error && <p className="field-error" role="alert">{error}</p>}
-    </div>
-  );
-}
-
 function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="flex justify-between gap-3">
@@ -448,12 +374,4 @@ function ReviewBlock({ title, onEdit, children }: { title: string; onEdit: () =>
       <div className="space-y-1">{children}</div>
     </div>
   );
-}
-
-function couponMessage(code: string) {
-  const m: Record<string, string> = {
-    COUPON_INVALID: "That coupon code isn't valid.", COUPON_EXPIRED: "That coupon has expired.", COUPON_NOT_STARTED: "That coupon isn't active yet.",
-    COUPON_EXHAUSTED: "That coupon has been fully used.", COUPON_MIN_SUBTOTAL: "Your subtotal is below this coupon's minimum.", COUPON_PHONE_LIMIT: "This coupon was already used with this phone number.",
-  };
-  return m[code] ?? "This coupon can't be applied.";
 }

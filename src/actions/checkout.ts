@@ -7,8 +7,11 @@ import { friendlyError, dbErrorCode } from "@/lib/errors";
 import { randomToken, sha256 } from "@/lib/tokens";
 import { clientIpHash, rateLimit } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { after } from "next/server";
+import { requestContext, sendPurchase, trackingConfig } from "@/lib/tracking/server";
+import { buildAttribution, saveAttribution } from "@/lib/tracking/attribution";
 
-export type QuoteLine = { variant_id: string; product_id: string; slug: string; name: string; variant_name: string; unit_price: number; quantity: number; line_total: number; stock: number; image_url: string | null };
+export type QuoteLine = { variant_id: string; sku?: string; product_id: string; slug: string; name: string; variant_name: string; unit_price: number; quantity: number; line_total: number; stock: number; image_url: string | null };
 export type Quote = {
   lines: QuoteLine[]; subtotal: number; discount: number; total: number;
   shipping: { zone: string; fee: number; label: string; eta: string | null } | null;
@@ -64,7 +67,7 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
     for (const i of parsed.error.issues) fieldErrors[i.path.join(".")] ??= i.message;
     return { ok: false, error: "Please check the highlighted fields.", fieldErrors };
   }
-  const { items, delivery, payment, couponCode, idempotencyKey, accessToken, proofPath } = parsed.data;
+  const { items, delivery, payment, couponCode, idempotencyKey, accessToken, proofPath, attribution } = parsed.data;
 
   const ip = await clientIpHash();
   if (!(await rateLimit(`checkout:ip:${ip}`, 8, 600)) || !(await rateLimit(`checkout:phone:${delivery.phone}`, 6, 3600))) {
@@ -90,11 +93,22 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
   };
 
   try {
-    const [row] = await asAnon((tx) => tx<{ r: { order_number: string; total: number; duplicate: boolean } }[]>`select public.place_order(${tx.json(payload)}) as r`);
+    const [row] = await asAnon((tx) => tx<{ r: { order_id: string; order_number: string; total: number; duplicate: boolean } }[]>`select public.place_order(${tx.json(payload)}) as r`);
     if (row.r.duplicate) {
       // A retried submit: hand back the original order only if this browser holds its secret.
       const [own] = await asAnon((tx) => tx<{ o: unknown }[]>`select public.get_order_public(${row.r.order_number}, ${sha256(token)}) as o`);
       if (!own.o) return { ok: false, error: "This checkout was already used. Please refresh the page.", code: "DUPLICATE" };
+    }
+    if (!row.r.duplicate) {
+      // Ads attribution + server-side Purchase (after the response, so checkout stays fast).
+      const ctx = await requestContext();
+      const attr = buildAttribution(attribution, ctx);
+      await saveAttribution(row.r.order_id, attr);
+      const orderId = row.r.order_id;
+      after(async () => {
+        const cfg = await trackingConfig();
+        if (cfg.purchaseTrigger === "placed") await sendPurchase(orderId, { ...ctx, ttclid: attr.ttclid ?? null, referrer: attr.referrer ?? null });
+      });
     }
     return { ok: true, orderNumber: row.r.order_number, token, total: Number(row.r.total) };
   } catch (e) {

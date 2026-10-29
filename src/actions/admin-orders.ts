@@ -1,5 +1,7 @@
 "use server";
 import { revalidatePath, updateTag } from "next/cache";
+import { after } from "next/server";
+import { sendPurchase, trackingConfig } from "@/lib/tracking/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
@@ -26,6 +28,13 @@ export async function transitionOrder(_: ActionState, form: FormData): Promise<A
     await admin.db((tx) => tx`select public.admin_transition_order(${p.data.orderId}, ${p.data.to}, ${p.data.note ?? null}, ${p.data.restock !== "no"})`);
     revalidatePath(`/admin/orders/${p.data.orderId}`);
     if (p.data.to === "cancelled" || p.data.to === "returned") updateTag("catalog");
+    if (p.data.to === "confirmed") {
+      const orderId = p.data.orderId;
+      // "Purchase on confirmation" mode: only orders the team has confirmed are reported to ad platforms.
+      after(async () => {
+        if ((await trackingConfig()).purchaseTrigger === "confirmed") await sendPurchase(orderId);
+      });
+    }
     return { ok: true, message: `Order marked ${p.data.to}.` };
   }) as Promise<ActionState>;
 }

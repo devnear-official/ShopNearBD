@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Camera, Mic, Search, SlidersHorizontal, X } from "lucide-react";
 import clsx from "clsx";
 import type { ProductQuery } from "@/lib/catalog";
 import { shopHref } from "@/lib/shop-params";
@@ -53,7 +53,16 @@ export function ShopFilters({ query, categories, total }: { query: ProductQuery;
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden />
             <label htmlFor="shop-q" className="sr-only">Search products</label>
             <input id="shop-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search in shop…" enterKeyHint="search"
-              className="h-11 w-full rounded-full bg-white pl-10 pr-4 text-sm shadow-[var(--shadow-card)] outline-none ring-electric focus:ring-2" />
+              className="h-11 w-full rounded-full bg-white pl-10 pr-24 text-sm shadow-[var(--shadow-card)] outline-none ring-electric focus:ring-2" />
+            {/* Voice and photo search open the search panel in that mode. */}
+            <span className="absolute right-1 top-1/2 flex -translate-y-1/2">
+              <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("sn:open-search", { detail: { mode: "voice" } }))} className="grid size-10 place-items-center rounded-full text-electric hover:bg-cloud" aria-label="Search by voice" title="Search by voice"><Mic className="size-[1.1rem]" /></button>
+              <label className="grid size-10 cursor-pointer place-items-center rounded-full text-tangerine hover:bg-cloud focus-within:ring-2 focus-within:ring-electric" title="Search with a photo">
+                <Camera className="size-[1.1rem]" aria-hidden />
+                <input type="file" accept="image/*" className="sr-only" aria-label="Search with a photo" data-shop-image-input
+                  onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) window.dispatchEvent(new CustomEvent("sn:open-search", { detail: { mode: "image", file } })); }} />
+              </label>
+            </span>
           </form>
           <button type="button" onClick={() => setPanel(true)} className="flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white">
             <SlidersHorizontal className="size-4" /> Filters{active.length ? ` · ${active.length}` : ""}

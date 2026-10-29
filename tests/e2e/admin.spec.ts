@@ -23,6 +23,23 @@ test("wrong password is rejected without revealing which part was wrong", async 
 test.describe("signed in", () => {
   test.use({ storageState: ADMIN_STATE });
 
+  test("ads tracking settings validate pixel IDs and never echo saved tokens", async ({ page }) => {
+    await page.goto("/admin/settings?tab=tracking");
+    const pixel = page.getByLabel("Meta (Facebook) Pixel ID");
+    const before = await pixel.inputValue();
+    await pixel.fill("not-a-pixel");
+    await page.getByRole("button", { name: "Save pixels" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: /Meta Pixel ID/ }).first()).toBeVisible();
+    await pixel.fill(before);
+    await page.getByLabel("TikTok Events API access token").fill("tt_e2e_secret_token_9876");
+    await page.getByRole("button", { name: "Save tokens" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("TikTok Events API access token")).toHaveValue("");
+    await expect(page.getByLabel("TikTok Events API access token")).toHaveAttribute("placeholder", /…9876/);
+    expect(await page.content()).not.toContain("tt_e2e_secret_token_9876");
+  });
+
   test("dashboard shows defined metrics", async ({ page }) => {
     await page.goto("/admin/dashboard");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

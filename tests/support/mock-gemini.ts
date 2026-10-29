@@ -15,6 +15,15 @@ export function startMockGemini(port = 0): Promise<{ url: string; requests: unkn
     const text: string = JSON.stringify(body.contents ?? []);
     if (text.includes("FAIL_AI")) { res.writeHead(500, { "content-type": "application/json" }); return res.end(JSON.stringify({ error: { code: 500, message: "mock failure" } })); }
     if (text.includes("SLOW_AI")) return; // never answers
+    if (text.includes("[search-intent]")) {
+      // Image / voice search: answer with the JSON the app asked for.
+      const media = (body.contents?.[0]?.parts ?? []).find((p: { inlineData?: { mimeType: string } }) => p.inlineData)?.inlineData?.mimeType as string | undefined;
+      const out = media?.startsWith("image/") ? { transcript: "", description: "A white bladeless neck fan", queries: ["neck fan", "fan"] }
+        : media?.startsWith("audio/") ? { transcript: "নেক ফ্যান", description: "", queries: ["neck fan"] }
+        : { transcript: "", description: "", queries: text.includes("ইয়ারবাড") ? ["earbuds"] : ["fan"] };
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify(out) }] }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 50, candidatesTokenCount: 20, totalTokenCount: 70 } }));
+    }
     const links = [...text.matchAll(/\\"url\\":\\"(\/shop\/[a-z0-9-]+)\\"/g)].map((m) => m[1]);
     const reply = links.length ? `Grounded answer. See [this product](${links[0]}).` : "Grounded answer without products.";
     res.writeHead(200, { "content-type": "application/json" });

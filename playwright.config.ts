@@ -24,8 +24,8 @@ export default defineConfig({
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/, use: chromium },
     { name: "responsive", testMatch: /responsive\.spec\.ts/, use: chromium, dependencies: ["setup"] },
-    { name: "mobile", testMatch: /(storefront|admin)\.spec\.ts/, use: { ...chromium, viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true }, dependencies: ["setup"] },
-    { name: "desktop", testMatch: /(storefront|admin)\.spec\.ts/, use: { ...chromium, viewport: { width: 1280, height: 860 } }, dependencies: ["setup"] },
+    { name: "mobile", testMatch: /(storefront|admin|buy-now)\.spec\.ts/, use: { ...chromium, viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true }, dependencies: ["setup"] },
+    { name: "desktop", testMatch: /(storefront|admin|buy-now)\.spec\.ts/, use: { ...chromium, viewport: { width: 1280, height: 860 } }, dependencies: ["setup"] },
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined

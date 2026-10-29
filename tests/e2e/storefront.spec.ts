@@ -38,10 +38,10 @@ test("variant selection updates price; add to bag; adjust quantity", async ({ pa
   await expect(drawer).toBeHidden();
 });
 
-test("guest checkout with Cash on Delivery creates a private order page", async ({ page, browser }) => {
+test("guest cart checkout with Cash on Delivery creates a private order page", async ({ page, browser }) => {
   await visit(page, "/shop/steel-water-bottle-750");
-  await page.getByRole("button", { name: /Buy now/ }).first().click();
-  await page.waitForURL("**/checkout");
+  await page.getByRole("button", { name: /Add to bag/ }).first().click();
+  await page.goto("/checkout");
   await page.getByLabel("Full name").fill("E2E Shopper");
   await page.getByLabel(/Mobile number/).fill("01812-345678");
   await page.getByLabel("District").selectOption("Sylhet");
@@ -50,9 +50,12 @@ test("guest checkout with Cash on Delivery creates a private order page", async 
   await page.getByRole("button", { name: "Review order" }).click();
   await expect(page.getByText(/Outside Dhaka · 3–5 days/)).toBeVisible();
   await page.getByRole("button", { name: /Place order/ }).click();
+  await page.waitForURL(/\/order\/SN\d{11}\/thank-you\?t=/);
+  await expect(page.getByRole("heading", { name: /Thank you, E2E!/ })).toBeVisible();
+  await expect(page.getByText(/we'll call 018\*\*\*\*\*678/i)).toBeVisible();
+  await page.getByRole("link", { name: "Track your order", exact: true }).click();
   await page.waitForURL(/\/order\/SN\d{11}\?t=/);
   await expect(page.getByRole("heading", { name: /Order received/ })).toBeVisible();
-  await expect(page.getByText(/we'll call 018\*\*\*\*\*678/i)).toBeVisible();
   const number = new URL(page.url()).pathname.split("/").pop();
 
   // Another browser without the private token cannot see the order.
