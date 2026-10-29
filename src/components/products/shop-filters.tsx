@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Camera, Mic, Search, SlidersHorizontal, X } from "lucide-react";
 import clsx from "clsx";
 import type { ProductQuery } from "@/lib/catalog";

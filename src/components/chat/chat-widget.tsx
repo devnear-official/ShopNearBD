@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowUp, Headset, Loader2, X } from "lucide-react";
 import clsx from "clsx";
 import { useDialog } from "@/hooks/use-dialog";

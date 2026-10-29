@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
 import { useState } from "react";
-import { m } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import type { Category } from "@/lib/catalog";

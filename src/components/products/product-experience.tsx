@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Banknote, Check, MapPin, ShieldCheck, ShoppingBag, Smartphone, Truck, Zap } from "lucide-react";
 import clsx from "clsx";
 import type { PaymentSettings, ProductDetail, Variant } from "@/lib/catalog";

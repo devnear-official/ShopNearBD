@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
 import { useRef } from "react";
-import { m, useScroll, useTransform, useReducedMotion } from "motion/react";
+import { useScroll, useTransform, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import type { ProductCard } from "@/lib/catalog";
 import { formatTaka } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";

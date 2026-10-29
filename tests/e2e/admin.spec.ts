@@ -40,6 +40,14 @@ test.describe("signed in", () => {
     expect(await page.content()).not.toContain("tt_e2e_secret_token_9876");
   });
 
+  test("every admin list page loads without the error screen", async ({ page }) => {
+    for (const [path, heading] of [["/admin/inventory", "Inventory"], ["/admin/customers", "Customers"], ["/admin/analytics", "Analytics"], ["/admin/coupons", "Coupons"], ["/admin/categories", "Categories"], ["/admin/couriers", "Couriers"]] as const) {
+      await visit(page, path);
+      await expect(page.getByRole("heading", { name: heading, exact: true }).first(), path).toBeVisible();
+      await expect(page.getByText("This admin page failed to load"), path).toHaveCount(0);
+    }
+  });
+
   test("dashboard shows defined metrics", async ({ page }) => {
     await visit(page, "/admin/dashboard");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

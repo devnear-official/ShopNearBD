@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
 import { useEffect, useRef, useState } from "react";
-import { m, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
+import { useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowRight, Clock3, MapPin } from "lucide-react";
 import type { HomepageSettings, ProductCard } from "@/lib/catalog";
 import { formatTaka } from "@/lib/format";

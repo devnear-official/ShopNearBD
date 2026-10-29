@@ -98,3 +98,14 @@ Per request, the admin used to ask Supabase Auth three times (proxy, layout, pag
 ## Customer check (order page)
 
 `customer_risk(phone)` returns the store's own history for the phone: orders, delivered / cancelled / returned, orders in the last 24 h, distinct names and addresses, and per-courier parcels (delivered, returned, in transit). `lib/risk.ts` turns that into Low / Medium / High with reasons. Couriers do not expose other merchants' delivery history through their public APIs, so this is the store's own data across all of its couriers; the order page also offers one-tap WhatsApp confirmation (a `wa.me` link with the order details pre-filled) and Call.
+
+## Follow-up pass (30 Oct 2026)
+
+Measured on the merged `main` with the same throttled-phone profile (4x CPU, 1.6 Mbps, 150 ms) and the 60k-order admin dataset.
+
+- **Analytics** is computed from every order in the window, so it is now cached and refreshed once a minute (`lib/admin-analytics.ts`): server time 757 ms to 47 ms, admin navigation to it 814 ms to 110 ms, page LCP 928 ms to 224 ms. Other admin pages already navigate in 110-160 ms.
+- **Checkout** paints its form immediately instead of a placeholder until the bag is read from the device; with an item in the bag the heading is the LCP at ~0.5 s (the empty-bag message still waits for the bag).
+- **Motion**: animation features load after the page is interactive and components use the lighter `motion/react-m` entry (about 8 KB gzip less in the first load); scroll-in sections are visible in the server HTML and only hidden on mount when they start below the fold.
+- **Bug found while measuring**: the admin Inventory page failed to load because it joined `auth.users`, which the `authenticated` role cannot read (on Supabase too). It now reads `public.profiles`; a smoke test opens the admin list pages so this cannot regress.
+
+Storefront (phone profile): home 1.4 s, shop 1.2 s, product 1.2 s, category 1.1 s LCP (FCP equals LCP), 233-305 KB JS, 350-440 KB total.

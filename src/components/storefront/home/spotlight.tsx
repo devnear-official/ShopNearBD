@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
 import { useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowRight, Check, ShoppingBag, Truck } from "lucide-react";
 import type { ProductCard } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
