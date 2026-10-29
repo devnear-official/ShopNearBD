@@ -95,9 +95,19 @@
     font-family: var(--font-display);
     font-weight: 700;
     font-variation-settings: "opsz" 96, "wdth" 92;
-    letter-spacing: -0.045em;
-    line-height: 0.9;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
   }
+  /*
+   * Type scale — every heading uses one of these, so sizes stay consistent.
+   * Phone (360 px) → desktop (1440 px):
+   *   t-hero 36 → 72 · t-page 28 → 48 · t-section 24 → 36 · t-sub 20 → 26 · t-card 18 → 22
+   */
+  .t-hero { font-size: clamp(2.25rem, 1.5rem + 3.4vw, 4.5rem); line-height: 0.98; letter-spacing: -0.04em; }
+  .t-page { font-size: clamp(1.75rem, 1.3rem + 2vw, 3rem); }
+  .t-section { font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem); }
+  .t-sub { font-size: clamp(1.25rem, 1.1rem + 0.55vw, 1.625rem); }
+  .t-card { font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.375rem); }
   .eyebrow {
     font-size: 0.72rem;
     font-weight: 700;

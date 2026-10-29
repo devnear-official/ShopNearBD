@@ -36,9 +36,9 @@ async function CategoryView({ params }: { params: Promise<{ slug: string }> }) {
     <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-8">
       <nav aria-label="Breadcrumb" className="text-sm text-slate"><Link href="/" className="hover:underline">Home</Link> / <Link href="/shop" className="hover:underline">Shop</Link> / <span className="text-ink">{cat.name}</span></nav>
       <header className="mt-4 rounded-[2.5rem] p-8 text-white sm:p-12" style={{ background: cat.accent ?? "#1E6BFF" }}>
-        <h1 className="display text-[clamp(2.4rem,9vw,6.5rem)]">{cat.name}</h1>
+        <h1 className="display t-page">{cat.name}</h1>
         {cat.name_bn && <p className="bn mt-1 text-2xl font-semibold opacity-85" lang="bn">{cat.name_bn}</p>}
-        <p className="mt-4 max-w-xl text-lg text-white/85">{cat.description}</p>
+        <p className="mt-4 max-w-xl text-base sm:text-lg text-white/85">{cat.description}</p>
         <ButtonLink href={`/shop?category=${cat.slug}`} variant="light" className="mt-6">Filter & sort {total} products</ButtonLink>
       </header>
       <div className="mt-10"><ProductGrid items={items} /></div>

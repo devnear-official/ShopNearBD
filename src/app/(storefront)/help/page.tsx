@@ -16,8 +16,8 @@ export default async function HelpPage() {
     <div className="mx-auto max-w-4xl px-4 pt-10 sm:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }} />
       <Streaks className="h-6 w-12" />
-      <h1 className="display mt-4 text-[clamp(2.4rem,9vw,6rem)]">How can we help?</h1>
-      <p className="bn mt-1 text-lg text-slate" lang="bn">সাহায্য ও নীতিমালা</p>
+      <h1 className="display mt-4 t-page">How can we help?</h1>
+      <p className="bn mt-1 text-base sm:text-lg text-slate" lang="bn">সাহায্য ও নীতিমালা</p>
       <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
         {[["delivery", "Delivery"], ["payments", "Payments"], ["returns", "Returns & refunds"], ["faq", "FAQ"], ["contact", "Contact"]].map(([id, l]) => (
           <a key={id} href={`#${id}`} className="rounded-full bg-white px-4 py-2 shadow-[var(--shadow-card)] hover:bg-cloud">{l}</a>
@@ -76,7 +76,7 @@ export default async function HelpPage() {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="mt-10 scroll-mt-28 rounded-[2rem] bg-white p-6 shadow-[var(--shadow-card)] sm:p-8">
-      <h2 id={`${id}-h`} className="display mb-4 text-3xl">{title}</h2>
+      <h2 id={`${id}-h`} className="display mb-4 t-sub">{title}</h2>
       {children}
     </section>
   );

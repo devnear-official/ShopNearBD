@@ -101,7 +101,7 @@ export function ShopFilters({ query, categories, total }: { query: ProductQuery;
             <m.div ref={ref} role="dialog" aria-modal="true" aria-labelledby="filters-title" initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}
               className="pb-safe relative w-full max-w-lg rounded-t-[2rem] bg-white p-6 sm:rounded-[2rem]">
               <div className="flex items-center justify-between">
-                <h2 id="filters-title" className="display text-3xl">Filters</h2>
+                <h2 id="filters-title" className="display t-sub">Filters</h2>
                 <button type="button" onClick={() => setPanel(false)} className="grid size-11 place-items-center rounded-full bg-cloud" aria-label="Close filters"><X className="size-5" /></button>
               </div>
               <fieldset className="mt-6">

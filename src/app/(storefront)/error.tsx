@@ -8,7 +8,7 @@ export default function StoreError({ error, reset }: { error: Error & { digest?:
   return (
     <div className="mx-auto flex max-w-md flex-col items-center px-6 py-24 text-center">
       <Streaks tone="tangerine" className="h-10 w-20" />
-      <h1 className="display mt-6 text-4xl">Something slipped</h1>
+      <h1 className="display mt-6 t-section">Something slipped</h1>
       <p className="mt-3 text-slate">We couldn&apos;t load this page. Your cart is safe. Please try again in a moment.</p>
       <div className="mt-6 flex gap-3">
         <button type="button" onClick={reset} className="rounded-full bg-electric px-6 py-3 font-semibold text-white">Try again</button>

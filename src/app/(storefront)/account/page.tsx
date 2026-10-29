@@ -39,7 +39,7 @@ async function Account() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="eyebrow text-electric">My account</p>
-          <h1 className="display mt-1 text-[clamp(2rem,6vw,3.2rem)]">Hi, {name.split(/\s+/)[0]}</h1>
+          <h1 className="display mt-1 t-page">Hi, {name.split(/\s+/)[0]}</h1>
           <p className="mt-1 font-mono text-slate">{me.phone}</p>
         </div>
         <form action={logout}><button type="submit" className="flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1 ring-line hover:bg-cloud"><LogOut className="size-4" /> Log out</button></form>
@@ -62,7 +62,7 @@ async function Account() {
       </dl>
 
       <section aria-labelledby="my-orders" className="mt-8">
-        <h2 id="my-orders" className="display text-2xl">Your orders</h2>
+        <h2 id="my-orders" className="display t-card">Your orders</h2>
         {orders.length === 0 ? (
           <div className="mt-3 rounded-[1.5rem] bg-white p-6 text-center shadow-[var(--shadow-card)]">
             <p className="text-slate">No orders on this number yet.</p>
@@ -92,7 +92,7 @@ async function Account() {
       </section>
 
       <section aria-labelledby="profile" className="mt-8 rounded-[1.5rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-6">
-        <h2 id="profile" className="display text-2xl">Your details</h2>
+        <h2 id="profile" className="display t-card">Your details</h2>
         <p className="mt-1 text-sm text-slate">Used to fill in checkout faster. Your phone number is your login.</p>
         <ProfileForm name={me.name ?? last?.name ?? ""} email={me.email ?? last?.email ?? ""} />
         {last && <p className="mt-4 text-sm text-slate">Last delivery address: {last.address}{last.area ? `, ${last.area}` : ""}, {last.district}</p>}

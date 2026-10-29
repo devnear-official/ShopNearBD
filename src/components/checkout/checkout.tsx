@@ -140,7 +140,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
     return (
       <div className="mx-auto flex max-w-md flex-col items-center py-24 text-center">
         <Streaks className="h-10 w-20" />
-        <h1 className="display mt-6 text-4xl">Your bag is empty</h1>
+        <h1 className="display mt-6 t-section">Your bag is empty</h1>
         <p className="mt-3 text-slate">Add something you like and come back here to check out.</p>
         <ButtonLink href="/shop" className="mt-6">Browse the shop</ButtonLink>
       </div>
@@ -226,7 +226,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
         {step === 1 && (
           <form onSubmit={submitDelivery} noValidate className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
-            <h1 className="display text-3xl sm:text-4xl">Where should we deliver?</h1>
+            <h1 className="display t-section">Where should we deliver?</h1>
             <p className="bn mt-1 text-slate" lang="bn">কোথায় পাঠাব?</p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field label="Full name" error={form.formState.errors.name?.message}>
@@ -276,7 +276,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
         {step === 2 && (
           <div className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
-            <h1 className="display text-3xl sm:text-4xl">How would you like to pay?</h1>
+            <h1 className="display t-section">How would you like to pay?</h1>
             <fieldset className="mt-6 space-y-3">
               <legend className="sr-only">Payment method</legend>
               {(["cod", "bkash_manual", "nagad_manual"] as Method[]).filter((m) => payments[m]?.enabled).map((m) => (
@@ -318,7 +318,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
         {step === 3 && (
           <div className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
-            <h1 className="display text-3xl sm:text-4xl">Check and place your order</h1>
+            <h1 className="display t-section">Check and place your order</h1>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <ReviewBlock title="Deliver to" onEdit={() => goTo(1)}>
                 <p className="font-semibold">{form.getValues("name")} · {normalizeBdPhone(form.getValues("phone"))}</p>
@@ -348,7 +348,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
       <aside className="hidden lg:block">
         <div className="sticky top-28">
-          <h2 className="display mb-4 text-2xl">Order summary</h2>
+          <h2 className="display mb-4 t-card">Order summary</h2>
           {Summary}
         </div>
       </aside>

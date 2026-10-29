@@ -53,9 +53,9 @@ export function CategoryLanes({ categories }: { categories: Category[] }) {
           <Link key={c.slug} href={`/shop?category=${c.slug}`} className="relative flex aspect-[3/4] w-[68%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[1.75rem] p-5 text-white sm:w-[40%]" style={{ background: c.accent ?? "#1E6BFF" }}>
             {c.cover && <Image src={c.cover} alt="" fill sizes="70vw" className="object-cover" />}
             <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10" />
-            <span className="relative font-display text-4xl font-bold">{String(i + 1).padStart(2, "0")}</span>
+            <span className="relative font-display text-3xl font-bold">{String(i + 1).padStart(2, "0")}</span>
             <span className="relative">
-              <span className="block font-display text-3xl font-bold leading-none">{c.name}</span>
+              <span className="block font-display text-2xl font-bold leading-none">{c.name}</span>
               {c.name_bn && <span className="bn mt-1 block font-semibold text-white/85" lang="bn">{c.name_bn}</span>}
               <span className="mt-2 block text-sm text-white/80">{c.product_count} products →</span>
             </span>

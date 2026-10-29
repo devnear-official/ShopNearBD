@@ -60,7 +60,7 @@ export function Hero({ copy, hero, orbit }: { copy: HomepageSettings; hero: Prod
             className="eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-electric shadow-[var(--shadow-card)]">
             <MapPin className="size-3.5" /> {copy.hero_eyebrow}
           </m.p>
-          <h1 className="display mt-6 text-[clamp(2.8rem,13vw,8.6rem)]">
+          <h1 className="display mt-6 t-hero">
             <m.span className="block" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.9, 0.1, 1] }}>
               {copy.hero_title}
             </m.span>
@@ -71,7 +71,7 @@ export function Hero({ copy, hero, orbit }: { copy: HomepageSettings; hero: Prod
               </m.span>
             </m.span>
           </h1>
-          <m.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-8 max-w-lg text-lg leading-relaxed text-slate">
+          <m.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-8 max-w-lg text-base sm:text-lg leading-relaxed text-slate">
             {copy.hero_subtitle}
           </m.p>
           <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-8 flex flex-wrap items-center gap-3">
