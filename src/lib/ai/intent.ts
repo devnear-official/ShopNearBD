@@ -25,7 +25,7 @@ export function classify(message: string): Intent {
 /** Budget like "under 2000", "২০০০ টাকার মধ্যে", "2k er niche". */
 export function extractBudget(message: string): number | null {
   const ascii = message.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
-  const m = /(?:under|below|within|less than|er? (?:moddhe|niche|vitore)|এর? (?:মধ্যে|নিচে)|max|budget)\s*৳?\s*(\d+(?:\.\d+)?)\s*(k)?/i.exec(ascii) ?? /৳?\s*(\d+(?:\.\d+)?)\s*(k)?\s*(?:taka|টাকা|tk)?\s*(?:er|এর)?\s*(?:moddhe|মধ্যে|niche|নিচে)/i.exec(ascii);
+  const m = /(?:under|below|within|less than|er? (?:moddhe|niche|vitore)|এর? (?:মধ্যে|নিচে)|max|budget)\s*৳?\s*(\d+(?:\.\d+)?)\s*(k)?/i.exec(ascii) ?? /৳?\s*(\d+(?:\.\d+)?)\s*(k)?\s*(?:takar?|টাকার?|tk)?\s*(?:er|এর)?\s*(?:moddhe|মধ্যে|niche|নিচে)/i.exec(ascii);
   if (!m) return null;
   const n = Number(m[1]) * (m[2] ? 1000 : 1);
   return Number.isFinite(n) && n > 0 ? n : null;
