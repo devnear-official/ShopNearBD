@@ -15,5 +15,10 @@ export async function GET(req: NextRequest) {
   await system((tx) => tx`update public.orders set attribution = attribution - 'ip' - 'user_agent' - 'fbp' - 'fbc' - 'ttp'
     where created_at < now() - interval '8 days' and attribution ?| array['ip', 'user_agent', 'fbp', 'fbc', 'ttp']`);
   await system((tx) => tx`delete from public.tracking_events where created_at < now() - interval '90 days'`);
+  // Customer login: used/expired codes, expired sessions, old SMS log rows.
+  await system((tx) => tx`delete from public.customer_otps where created_at < now() - interval '1 day'`);
+  await system((tx) => tx`delete from public.customer_sessions where expires_at < now()`);
+  await system((tx) => tx`delete from public.dev_sms_outbox where created_at < now() - interval '1 day'`);
+  await system((tx) => tx`delete from public.sms_log where created_at < now() - interval '90 days'`);
   return NextResponse.json({ ok: true, retention_days: s.retention_days });
 }

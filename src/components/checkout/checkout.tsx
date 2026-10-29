@@ -16,7 +16,7 @@ import { formatTaka } from "@/lib/format";
 import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Streaks } from "@/components/ui/streaks";
-import { Field, ManualPayment, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
+import { Field, ManualPayment, accountDelivery, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
 import { readAttribution, track } from "@/lib/tracking/client";
 
 export function Checkout({ shipping, payments }: { shipping: ShippingSettings; payments: PaymentSettings }) {
@@ -55,6 +55,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
       sessionStorage.setItem("sn_checkout", JSON.stringify(keys.current));
       const d = JSON.parse(localStorage.getItem("sn_delivery") ?? "null");
       if (d) form.reset({ ...form.getValues(), ...d });
+      else void accountDelivery().then((a) => { if (a && !form.formState.isDirty) form.reset({ ...form.getValues(), ...a }); });
     } catch {
       keys.current = newKeys();
     }

@@ -23,8 +23,11 @@ export function TokenResolver({ number }: { number: string }) {
   return (
     <div className="rounded-[2rem] bg-white p-8 text-center shadow-[var(--shadow-card)]">
       <h1 className="display text-4xl">Private order link needed</h1>
-      <p className="mx-auto mt-3 max-w-md text-slate">For your privacy we only show an order through the private link created when it was placed. It isn&apos;t saved on this device. Contact us with your order number and phone and we&apos;ll help.</p>
-      <Link href="/order" className="mt-6 inline-block font-semibold text-electric underline">Orders saved on this device</Link>
+      <p className="mx-auto mt-3 max-w-md text-slate">For your privacy we only show an order through the private link created when it was placed. It isn&apos;t saved on this device — log in with the phone number you ordered with to see it.</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link href={`/account/login?next=${encodeURIComponent(`/order/${number}`)}`} className="inline-flex min-h-10 items-center rounded-full bg-electric px-5 font-semibold text-white">Log in with your phone</Link>
+        <Link href="/order" className="inline-flex min-h-10 items-center font-semibold text-electric underline">Orders saved on this device</Link>
+      </div>
     </div>
   );
 }

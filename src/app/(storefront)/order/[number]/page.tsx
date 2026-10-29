@@ -6,6 +6,7 @@ import { Check, ExternalLink, MapPin, Package, Truck } from "lucide-react";
 import clsx from "clsx";
 import { asAnon } from "@/lib/db";
 import { sha256 } from "@/lib/tokens";
+import { ownOrderHash } from "@/lib/customer/auth";
 import { formatDateTime, formatTaka } from "@/lib/format";
 import { CUSTOMER_STATUS, METHOD_LABEL, PAYMENT_STATUS, PROGRESS } from "@/lib/order-status";
 import { getPublicSettings } from "@/lib/catalog";
@@ -37,10 +38,12 @@ export default function OrderPage(props: Params) {
 
 async function OrderView({ params, searchParams }: Params) {
   const [{ number }, sp] = await Promise.all([params, searchParams]);
-  const token = sp.t;
-  if (!token || !/^[A-Za-z0-9_-]{20,128}$/.test(token) || !/^SN\d{11}$/.test(number)) return <TokenResolver number={number} />;
-
-  const hash = sha256(token);
+  if (!/^SN\d{11}$/.test(number)) return <TokenResolver number={number} />;
+  const linkToken = sp.t && /^[A-Za-z0-9_-]{20,128}$/.test(sp.t) ? sp.t : null;
+  // Without the private link, a signed-in customer can open orders placed with their own phone number.
+  const hash = linkToken ? sha256(linkToken) : await ownOrderHash(number);
+  if (!hash) return <TokenResolver number={number} />;
+  const token = linkToken ?? "";
   const [row] = await asAnon((tx) => tx<{ o: PublicOrder | null; reviews: { product_id: string; status: string }[] }[]>`
     select public.get_order_public(${number}, ${hash}) as o, public.order_reviews(${number}, ${hash}) as reviews`);
   const o = row?.o;

@@ -25,6 +25,17 @@ export function rememberOrder(o: { orderNumber: string; token: string; total: nu
   } catch {}
 }
 
+/** Delivery details from the signed-in customer's account (last order), if any. */
+export async function accountDelivery(): Promise<Record<string, string> | null> {
+  try {
+    const r = await fetch("/api/account/me", { cache: "no-store" });
+    const j = await r.json();
+    return j.signedIn ? Object.fromEntries(Object.entries(j.delivery as Record<string, string>).filter(([, v]) => v)) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function validateManual(method: Method | null, payLater: boolean, sender: string, txid: string) {
   const errs: Record<string, string> = {};
   if (!method) errs.method = "Choose a payment method";
