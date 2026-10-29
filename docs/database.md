@@ -68,3 +68,11 @@ Server code switches to the `anon` or `authenticated` role inside each transacti
 - `products_search_idx` (GIN on a weighted `tsvector` of names, Bangla name, tags, SKU, descriptions) and `products_name_trgm_idx` for search.
 - `orders_status_idx`, `orders_created_idx`, `orders_phone_idx`, `orders_name_trgm_idx` for the admin order list.
 - `shipments_one_active_idx` (unique, partial) prevents double booking.
+
+## Ads tracking
+
+- `orders.attribution` (jsonb): UTM tags, click IDs (`fbclid`, `ttclid`, `gclid`), landing page, referrer and a derived `channel`, written once by trusted server code when the order is placed. It also briefly holds the IP, user agent and `_fbp`/`_fbc`/`_ttp` cookies needed to match the server-side Purchase; IP and user agent are removed as soon as Purchase is sent, and all matching fields are purged after 8 days by `/api/cron/cleanup`. Indexed on `(attribution->>'channel', created_at)` for the analytics breakdown.
+- `orders.purchase_tracked_at`: set atomically (`update … where purchase_tracked_at is null returning …`) so each order's Purchase reaches Meta/TikTok at most once, whether it is triggered on placement or on confirmation.
+- `tracking_events`: one row per server-side event per platform (sent / failed / skipped, HTTP status, short response detail, test mode). Admin-read only via RLS; kept 90 days.
+- Settings: `tracking` (public — pixel IDs, Purchase trigger, TikTok purchase event name, server-events switch) and `tracking_secrets` (private — access tokens and test event codes; never sent to the browser or the audit log).
+- `quote_cart` and `get_order_public` return item SKUs so browser events use the same content IDs as the server and the catalogue feed.

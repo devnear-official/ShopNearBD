@@ -127,6 +127,7 @@ export function ChatWidget({ greeting: fallbackGreeting }: { greeting: string })
             initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 22 }}
             aria-label={unread ? "Open chat — new reply from our team" : "Chat with us"}
+            data-chat-launcher
             className={clsx("group fixed right-4 z-40 h-14 items-center gap-2 rounded-full bg-ink pl-2 pr-2 text-white shadow-[0_18px_40px_-14px_rgba(11,21,48,.7)] sm:flex sm:pr-5", onCheckout ? "hidden" : "flex")}
             style={{ bottom: "calc(1rem + env(safe-area-inset-bottom) + var(--sticky-bar, 0px))" }}
           >

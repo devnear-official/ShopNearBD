@@ -18,6 +18,8 @@ export function Header({ categories }: { categories: Cat[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
+  const [searchMode, setSearchMode] = useState<"text" | "voice" | "image">("text");
+  const [searchFile, setSearchFile] = useState<File | null>(null);
   const [catsOpen, setCatsOpen] = useState(false);
 
   useEffect(() => {
@@ -33,8 +35,16 @@ export function Header({ categories }: { categories: Cat[] }) {
         setSearch(true);
       }
     };
+    // Other components (e.g. the search bar on /shop) can open search in voice or photo mode.
+    const onOpen = (e: Event) => {
+      const d = (e as CustomEvent<{ mode?: "text" | "voice" | "image"; file?: File }>).detail;
+      setSearchMode(d?.mode ?? "text");
+      setSearchFile(d?.file ?? null);
+      setSearch(true);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("sn:open-search", onOpen);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("sn:open-search", onOpen); };
   }, []);
 
   const menuRef = useDialog<HTMLDivElement>(menu, () => setMenu(false));
@@ -173,7 +183,7 @@ export function Header({ categories }: { categories: Cat[] }) {
         )}
       </AnimatePresence>
 
-      <SearchOverlay open={search} onClose={() => setSearch(false)} />
+      <SearchOverlay open={search} mode={searchMode} file={searchFile} onClose={() => { setSearch(false); setSearchMode("text"); setSearchFile(null); }} />
     </>
   );
 }

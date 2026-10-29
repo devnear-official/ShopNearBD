@@ -2,6 +2,7 @@
 import { Heart } from "lucide-react";
 import clsx from "clsx";
 import { parseJsonArray, useStoredValue } from "@/hooks/use-stored-value";
+import { track } from "@/lib/tracking/client";
 
 const KEY = "sn_wishlist";
 
@@ -12,8 +13,12 @@ export function useWishlist() {
   return { slugs, has: (slug: string) => slugs.includes(slug), toggle, hydrated };
 }
 
-export function WishlistButton({ slug, name, className, withLabel }: { slug: string; name: string; className?: string; withLabel?: boolean }) {
-  const { has, toggle } = useWishlist();
+export function WishlistButton({ slug, name, className, withLabel, price }: { slug: string; name: string; className?: string; withLabel?: boolean; price?: number }) {
+  const { has, toggle: rawToggle } = useWishlist();
+  const toggle = (s: string) => {
+    if (!has(s)) track("AddToWishlist", { value: price, items: [{ id: s, name, quantity: 1, price: price ?? 0 }] });
+    rawToggle(s);
+  };
   const saved = has(slug);
   return (
     <button type="button" onClick={() => toggle(slug)} aria-pressed={saved} aria-label={saved ? `Remove ${name} from wishlist` : `Save ${name} to wishlist`}

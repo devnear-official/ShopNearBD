@@ -35,3 +35,28 @@ export async function generate(system: string, contents: { role: "user" | "model
     clearTimeout(timer);
   }
 }
+
+export type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
+
+/**
+ * One multimodal call that must answer with JSON (image or audio + instructions).
+ * Used by image and voice search; the media is sent inline and never stored.
+ */
+export async function generateJson<T>(parts: Part[], s: Pick<GeminiSettings, "model">, schema: Record<string, unknown>, timeoutMs = 15000): Promise<T> {
+  const c = ai();
+  if (!c) throw new Error("GEMINI_NOT_CONFIGURED");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await c.models.generateContent({
+      model: s.model,
+      contents: [{ role: "user", parts }],
+      config: { temperature: 0.1, maxOutputTokens: 400, responseMimeType: "application/json", responseSchema: schema, abortSignal: ctrl.signal, httpOptions: { timeout: timeoutMs } },
+    });
+    const text = res.text?.trim();
+    if (!text) throw new Error("GEMINI_EMPTY");
+    return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}

@@ -24,6 +24,7 @@ type Order = {
   id: string; order_number: string; status: string; payment_status: string; payment_method: string; customer_name: string; phone: string; email: string | null;
   address: string; district: string; area: string | null; zone: string; delivery_note: string | null; subtotal: number; discount_total: number; shipping_fee: number;
   total: number; coupon_code: string | null; created_at: Date; cancel_reason: string | null; ip_hash: string | null;
+  attribution: Record<string, string> | null; purchase_tracked_at: Date | null;
 };
 
 export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -191,6 +192,10 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             )}
           </Card>
 
+          <Card title="Source">
+            <SourceDetails a={o.attribution ?? {}} tracked={o.purchase_tracked_at} />
+          </Card>
+
           <Card title="Internal notes">
             <ActionForm action={addOrderNote} resetOnSuccess className="mb-3">
               <input type="hidden" name="orderId" value={o.id} />
@@ -204,5 +209,23 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
         </div>
       </div>
     </>
+  );
+}
+
+const CHANNEL: Record<string, string> = { facebook: "Facebook / Instagram ad", tiktok: "TikTok ad", google: "Google", utm_source: "Tagged link", referral: "Referral", direct: "Direct / unknown" };
+
+function SourceDetails({ a, tracked }: { a: Record<string, string>; tracked: Date | null }) {
+  const rows: [string, string | undefined][] = [
+    ["Campaign", a.utm_campaign], ["Source / medium", [a.utm_source, a.utm_medium].filter(Boolean).join(" / ") || undefined], ["Ad set / content", a.utm_content], ["Term", a.utm_term],
+    ["Landing page", a.landing], ["Referrer", a.referrer], ["Click ID", a.fbclid ? "fbclid ✓" : a.ttclid ? "ttclid ✓" : a.gclid ? "gclid ✓" : undefined],
+  ];
+  return (
+    <div className="text-sm">
+      <p className="font-semibold">{CHANNEL[a.channel ?? "direct"] ?? a.channel}</p>
+      <dl className="mt-2 space-y-1">
+        {rows.filter(([, v]) => v).map(([k, v]) => <div key={k} className="flex gap-2"><dt className="w-32 shrink-0 text-slate">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>)}
+      </dl>
+      <p className="mt-2 text-xs text-slate">{tracked ? `Purchase sent to ad platforms (server) at ${formatDateTime(tracked)}.` : "Purchase not sent from the server yet."}</p>
+    </div>
   );
 }

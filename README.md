@@ -12,8 +12,11 @@ A complete e-commerce platform for a Bangladesh-based shop: an art-directed stor
 - "Speed Lane" design system built from the logo: speed streaks, the swoosh, and shopping-tag product cards (punched eyelet, tangerine price flag). Bricolage Grotesque display type, Figtree body, Hind Siliguri for Bangla.
 - Homepage: a "radar" hero (featured product at the centre of 2 km / Dhaka / 64-district rings), ticker, category lanes, spotlight product with quick-add, new/popular tabs, an editorial collection story, and delivery/payment/returns information pulled from settings. All copy and the hero product are editable in Admin → Settings → Homepage.
 - `/shop`: server-side search (Postgres full-text + trigram), category/price/stock filters, sorting, pagination, all in the URL. Crawlable category pages at `/category/[slug]`.
-- `/shop/[slug]`: gallery (scroll-through on desktop, swipe on phones) with full-screen zoom, option selectors with live price/stock, quantity, Add to bag / Buy now, a delivery estimator by district, specs, policies, verified-buyer reviews, related and recently viewed products, sticky purchase bar on phones, Product + Breadcrumb JSON-LD. `/shop/<uuid>` redirects to the slug.
+- `/shop/[slug]`: gallery (scroll-through on desktop, swipe on phones) with full-screen zoom, option selectors with live price/stock, quantity, Add to bag, **Buy now → a single-page order form on the product page itself** (name, phone, district/zone, address, COD/bKash/Nagad, coupon, live server-priced total — no cart, no other page), a delivery estimator by district, specs, policies, verified-buyer reviews, related and recently viewed products, sticky purchase bar on phones, Product + Breadcrumb JSON-LD. `/shop/<uuid>` redirects to the slug.
 - Cart drawer, 3-step checkout (delivery → payment → review) with server-side pricing, coupon codes, Dhaka/suburbs/outside-Dhaka zones and 64 districts, Cash on Delivery, and manual bKash/Nagad (pay now with TrxID/screenshot, or pay later from the order page).
+- Thank-you page after every order (`/order/SN…/thank-you?t=<secret>`): order number, total, payment instructions, what happens next, items, and a **Track your order** button.
+- **Voice search** (mic button in search; বাংলা or English) and **photo search** (camera button: snap or upload a picture) — see "Voice & photo search".
+- **Facebook (Meta) and TikTok pixels + server-side events** — see "Ads tracking".
 - Private order pages (`/order/SN…?t=<secret>`) with a status timeline, payment status, courier tracking and review forms after delivery.
 - Guest wishlist (♡ on cards and product pages, `/wishlist`), kept on the device; prices shown are live.
 - Floating support chat (Bangla, Banglish, English) with human hand-off.
@@ -83,6 +86,9 @@ Then open http://localhost:3000 and http://localhost:3000/admin.
 | `ALLOW_SANDBOX_COURIER` | server | `1` lets the sandbox courier be used in a production build (staging). Off by default. |
 | `STEADFAST_*`, `PATHAO_*`, `REDX_*` | server | Courier credentials and webhook secrets — see below. |
 | `DB_POOL_MAX` | server | Optional pool size per server instance (default 5). |
+| `META_PIXEL_ID`, `TIKTOK_PIXEL_ID` | build + server | Optional. Override the pixel IDs saved in Admin → Settings → Ads tracking. Storefront pages are prerendered, so set them **before building**; the admin setting needs no rebuild. |
+| `META_CAPI_ACCESS_TOKEN`, `TIKTOK_EVENTS_ACCESS_TOKEN` | **server only** | Optional. Override the tokens saved in the admin. |
+| `META_TEST_EVENT_CODE`, `TIKTOK_TEST_EVENT_CODE` | server | Optional, for testing only. Remove before going live. |
 
 `.env.local` is git-ignored. Only `.env.example` (empty values) is committed.
 
@@ -144,6 +150,36 @@ Timeouts and 5xx errors are treated as retryable; failed attempts free the slot 
 
 ---
 
+## Ads tracking (Meta Pixel + Conversions API, TikTok Pixel + Events API)
+
+Set it up in **Admin → Settings → Ads tracking**:
+
+1. **Meta:** Events Manager → *Connect data sources → Web* → create a pixel and copy its **Pixel ID**. Then *Settings → Conversions API → Generate access token* and paste the token. Verify your domain in Business Settings → Brand safety → Domains and, under *Aggregated event measurement*, prioritise **Purchase**.
+2. **TikTok:** Ads Manager → *Tools → Events → Web events → Set up web events → Manually set up* → copy the **Pixel ID** (letters + digits), then *Settings → Generate access token*.
+3. Save, open the store in another browser, and use **Send test event** (with a test event code from each Events Manager's *Test events* tab). Remove the test codes when done.
+
+What happens:
+
+- Both pixels load on every storefront page (never in the admin) with **PageView**, then **ViewContent** (product page), **Search** (typed, voice and photo), **AddToCart**, **AddToWishlist**, **InitiateCheckout** (checkout or product-page form), **AddPaymentInfo** and **Purchase** (thank-you page).
+- Every event except PageView is **also sent from the server** (`/api/track` relay; Purchase comes straight from the stored order) with the **same event ID**, so Meta and TikTok de-duplicate them and ad blockers / iOS don't lose sales. Purchase uses the order total from the database, never the browser's numbers, and is sent **once per order** (`orders.purchase_tracked_at`).
+- Server events carry hashed (SHA-256) phone in country-code format, email, first/last name, district and country, plus IP, user agent and the `_fbp`/`_fbc`/`_ttp` cookies and `ttclid` for matching. If `fbclid` is in the landing URL and the pixel was blocked, `_fbc` is built from it. The raw IP and user agent are removed from the order as soon as Purchase is sent, and all matching data is purged after 8 days by the cleanup cron.
+- **When is it a Purchase?** Default: when the order is placed (best for ad optimisation). For COD stores with many fake orders you can switch to "when our team confirms the order" — the server then sends Purchase on confirmation (the browser pixel doesn't fire it on the thank-you page, so nothing is double-counted).
+- Content IDs are **variant SKUs**. The catalogue feed at **`/feeds/products.xml`** (RSS 2.0 / Google product format: one item per variant, `item_group_id` = product SKU, price in BDT, stock status) can be added to Meta Commerce Manager and TikTok Catalog for dynamic product ads.
+- Each order stores its source (UTM tags, click IDs, landing page, referrer) — shown on the order page in the admin, and **Analytics → Orders by source** breaks down orders and value by Facebook / TikTok / Google / campaign. Tag your ad URLs with `utm_source`, `utm_medium` and `utm_campaign` (Meta: `utm_source=facebook&utm_campaign={{campaign.name}}`; TikTok: `utm_source=tiktok&utm_campaign=__CAMPAIGN_NAME__`).
+- Admin → Settings → Ads tracking shows the last 40 server events with the platform's response, so failures (expired token, wrong pixel ID) are visible.
+
+Verified locally against stand-in Meta/TikTok endpoints (request format, hashing, dedup IDs, once-only Purchase). It has **not** been verified against the live Meta/TikTok APIs from this environment — after setup, confirm events arrive in each Events Manager's *Test events* tab.
+
+---
+
+## Voice & photo search
+
+- **Voice:** the mic button (search panel and the `/shop` search field) uses the browser's own speech recognition where it exists (Chrome, Edge, Safari), in বাংলা (`bn-BD`) or English. The words are searched directly; if a Bangla sentence finds nothing and Gemini is configured, Gemini maps it to catalogue words (`POST /api/search/voice`). Browsers without speech recognition (e.g. Firefox) record up to 8 seconds and Gemini transcribes it — this needs `GEMINI_API_KEY`. The microphone is only used after the shopper taps the mic (`Permissions-Policy: microphone=(self)`).
+- **Photo:** the camera button opens the phone's camera or photo library. The picture is shrunk to ≤1024 px JPEG in the browser (no EXIF/location), sent once to Gemini vision with the store's category/product vocabulary, and the returned search words run through the normal catalogue search (`POST /api/search/image`). Needs `GEMINI_API_KEY`; without it the shopper is asked to type instead.
+- Audio and photos are never stored or logged. Both endpoints are rate-limited per IP (voice 20/min, photo 8/min) and check file type and size (photo ≤ 6 MB by magic bytes; audio ≤ 2 MB).
+
+---
+
 ## Security notes
 
 - Every admin page, server action and route handler re-checks the admin role on the server (`requireAdminPage` / `requireAdmin` / `getAdmin`); the proxy only refreshes sessions.
@@ -161,10 +197,10 @@ npm run typecheck
 npm run lint
 npm test                    # Vitest: unit + integration (resets DB "shopnear_test" each run)
 npm run build && npm run start -- -p 3100
-PW_CHROMIUM_PATH=/path/to/chrome npm run test:e2e   # Playwright: storefront, admin, responsive
+PW_CHROMIUM_PATH=/path/to/chrome npm run test:e2e   # Playwright: storefront, product-page order, voice/photo search, feed, admin, responsive
 ```
 
-Integration tests need the local Postgres (`./scripts/dev-services.sh`) or `TEST_DATABASE_URL` pointing at a disposable database with the Supabase roles. They cover RLS, server-side pricing, coupons, delivery zones, duplicate submissions, a 12-buyers-for-3-units race, order privacy, admin authorization, status transitions, refunds, courier booking/retry/webhook idempotency, and the chat (fallback, private order lookup, Gemini grounding through the real SDK against a local mock, rate limiting).
+Integration tests need the local Postgres (`./scripts/dev-services.sh`) or `TEST_DATABASE_URL` pointing at a disposable database with the Supabase roles. They cover tracking (hashing formats, event mapping, attribution, Meta/TikTok server requests against a local stand-in, once-only Purchase), RLS, server-side pricing, coupons, delivery zones, duplicate submissions, a 12-buyers-for-3-units race, order privacy, admin authorization, status transitions, refunds, courier booking/retry/webhook idempotency, and the chat (fallback, private order lookup, Gemini grounding through the real SDK against a local mock, rate limiting).
 
 The responsive suite visits storefront and admin pages at 320, 360, 375, 390, 430, 768, 1024, 1280, 1440 and 1920 px, asserts no horizontal overflow, and saves screenshots to `test-results/screens/`.
 

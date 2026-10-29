@@ -4,23 +4,30 @@ import { AlertTriangle } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { Card, PageHeader } from "@/components/admin/ui";
-import { ActionForm, Field, SubmitButton, TextArea } from "@/components/admin/form";
+import { ActionForm, Field, Select, SubmitButton, TextArea } from "@/components/admin/form";
+import { sendTrackingTest } from "@/actions/admin-tracking";
+import { siteUrl } from "@/lib/env";
+import { Badge } from "@/components/admin/ui";
 import { saveSettings } from "@/actions/admin-settings";
 import { PasswordForm } from "./password-form";
 import type { HomepageSettings, PaymentSettings, PolicySettings, StoreSettings } from "@/lib/catalog";
 import type { ShippingSettings } from "@/lib/shipping";
 
-const TABS = [["store", "Store"], ["shipping", "Delivery"], ["payments", "Payments"], ["policies", "Policies"], ["homepage", "Homepage"], ["ai", "AI assistant"], ["account", "Account"], ["audit", "Audit log"]] as const;
+const TABS = [["store", "Store"], ["shipping", "Delivery"], ["payments", "Payments"], ["policies", "Policies"], ["homepage", "Homepage"], ["ai", "AI assistant"], ["tracking", "Ads tracking"], ["account", "Account"], ["audit", "Audit log"]] as const;
+type TrackingRow = { id: number; platform: string; event_name: string; event_id: string; status: string; http_status: number | null; detail: string | null; test_mode: boolean; created_at: Date; order_number: string | null };
+type TrackingSettingsRow = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
 type AiSettings = { enabled: boolean; model: string; temperature: number; max_output_tokens: number; per_ip_per_minute: number; per_conversation_per_hour: number; retention_days: number; greeting: string };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const admin = await requireAdminPage();
   const requested = (await searchParams).tab;
   const tab = TABS.some(([k]) => k === requested) ? requested! : "store";
-  const [rows, audit, products] = await admin.db((tx) => Promise.all([
+  const [rows, audit, products, events] = await admin.db((tx) => Promise.all([
     tx<{ key: string; value: Record<string, unknown>; updated_at: Date }[]>`select key, value, updated_at from public.site_settings`,
     tab === "audit" ? tx<{ id: number; actor_label: string; action: string; entity: string; entity_id: string | null; created_at: Date }[]>`select id, actor_label, action, entity, entity_id, created_at from public.audit_logs order by id desc limit 100` : Promise.resolve([]),
     tab === "homepage" ? tx<{ slug: string; name: string }[]>`select slug, name from public.products where status = 'published' order by name` : Promise.resolve([]),
+    tab === "tracking" ? tx<TrackingRow[]>`select e.id, e.platform, e.event_name, e.event_id, e.status, e.http_status, e.detail, e.test_mode, e.created_at, o.order_number
+      from public.tracking_events e left join public.orders o on o.id = e.order_id order by e.id desc limit 40` : Promise.resolve([] as TrackingRow[]),
   ]));
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value])) as Record<string, never>;
   const devDefaults = rows.filter((r) => (r.value as { dev_default?: boolean }).dev_default).map((r) => r.key);
@@ -41,6 +48,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "policies" && <PoliciesForm v={s.policies as PolicySettings} />}
       {tab === "homepage" && <HomepageForm v={s.homepage as HomepageSettings} products={products} />}
       {tab === "ai" && <AiForm v={s.ai as AiSettings} />}
+      {tab === "tracking" && <TrackingTab v={s.tracking as TrackingSettingsRow} secrets={s.tracking_secrets as Record<string, string> | undefined} events={events} />}
       {tab === "account" && <Card title="Change your password"><PasswordForm /><p className="mt-4 text-xs text-slate">Signed in as {admin.email}. Forgot it? Use “Forgot password” on the sign-in page.</p></Card>}
       {tab === "audit" && (
         <Card title="Audit log (latest 100)">
@@ -177,5 +185,83 @@ function AiForm({ v }: { v: AiSettings }) {
       </div>
       <TextArea label="Greeting" name="greeting" rows={2} defaultValue={v.greeting} />
     </Form>
+  );
+}
+
+const mask = (t?: string) => (t ? `saved · ends in …${t.slice(-4)}` : "not set");
+
+function TrackingTab({ v, secrets, events }: { v: TrackingSettingsRow; secrets?: Record<string, string>; events: TrackingRow[] }) {
+  const env = {
+    meta: Boolean(process.env.META_PIXEL_ID), tiktok: Boolean(process.env.TIKTOK_PIXEL_ID),
+    metaToken: Boolean(process.env.META_CAPI_ACCESS_TOKEN), tiktokToken: Boolean(process.env.TIKTOK_EVENTS_ACCESS_TOKEN),
+  };
+  const feed = `${siteUrl()}/feeds/products.xml`;
+  return (
+    <div className="space-y-4">
+      <Card title="Pixels">
+        <ActionForm action={saveSettings} className="space-y-4">
+          <input type="hidden" name="key" value="tracking" />
+          <p className="text-sm text-slate">The browser pixels load on every storefront page. Every event is also sent from the server (Conversions API / Events API) with the same event ID, so ad blockers and iOS don&apos;t lose your sales and the platforms count each event once.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Meta (Facebook) Pixel ID" name="meta_pixel_id" defaultValue={v?.meta_pixel_id ?? ""} inputMode="numeric" placeholder="e.g. 123456789012345" hint={env.meta ? "META_PIXEL_ID env var overrides this" : "Events Manager → Data sources"} />
+            <Field label="TikTok Pixel ID" name="tiktok_pixel_id" defaultValue={v?.tiktok_pixel_id ?? ""} placeholder="e.g. C1A2B3C4D5E6F7G8H9I0" hint={env.tiktok ? "TIKTOK_PIXEL_ID env var overrides this" : "Ads Manager → Assets → Events"} />
+            <Select label="Count a Purchase when…" name="purchase_trigger" defaultValue={v?.purchase_trigger ?? "placed"} options={[{ value: "placed", label: "the order is placed (recommended for ad optimisation)" }, { value: "confirmed", label: "the order is confirmed by our team (fewer fake COD orders)" }]} />
+            <Select label="TikTok purchase event name" name="tiktok_purchase_event" defaultValue={v?.tiktok_purchase_event ?? "Purchase"} options={[{ value: "Purchase", label: "Purchase (current standard)" }, { value: "CompletePayment", label: "CompletePayment (older campaigns)" }]} />
+          </div>
+          <label className="flex items-center gap-2 font-semibold"><input type="checkbox" name="server_events" defaultChecked={v?.server_events !== false} className="size-4 accent-electric" /> Send server-side events (Conversions API + Events API)</label>
+          <SubmitButton>Save pixels</SubmitButton>
+        </ActionForm>
+      </Card>
+
+      <Card title="Server access tokens">
+        <ActionForm action={saveSettings} className="space-y-4">
+          <input type="hidden" name="key" value="tracking_secrets" />
+          <p className="text-sm text-slate">Tokens are stored server-side only and never shown again. Leave a token field empty to keep the saved one.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Meta Conversions API access token" name="meta_access_token" type="password" autoComplete="off" placeholder={mask(secrets?.meta_access_token)} hint={env.metaToken ? "META_CAPI_ACCESS_TOKEN env var overrides this" : "Events Manager → Settings → Generate access token"} />
+            <Field label="Meta test event code (optional)" name="meta_test_event_code" defaultValue={secrets?.meta_test_event_code ?? ""} placeholder="e.g. TEST12345" hint="Remove after testing" />
+            <Field label="TikTok Events API access token" name="tiktok_access_token" type="password" autoComplete="off" placeholder={mask(secrets?.tiktok_access_token)} hint={env.tiktokToken ? "TIKTOK_EVENTS_ACCESS_TOKEN env var overrides this" : "Events Manager → Settings → Generate access token"} />
+            <Field label="TikTok test event code (optional)" name="tiktok_test_event_code" defaultValue={secrets?.tiktok_test_event_code ?? ""} placeholder="e.g. TEST12345" hint="Remove after testing" />
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <label className="flex items-center gap-2"><input type="checkbox" name="clear_meta" className="size-4 accent-electric" /> Remove saved Meta token</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="clear_tiktok" className="size-4 accent-electric" /> Remove saved TikTok token</label>
+          </div>
+          <SubmitButton>Save tokens</SubmitButton>
+        </ActionForm>
+        <ActionForm action={sendTrackingTest} className="mt-5 border-t border-line pt-5">
+          <p className="mb-3 text-sm text-slate">Sends one test <b>ViewContent</b> event to each platform with a token. With a test event code set, it appears under “Test events”.</p>
+          <SubmitButton variant="dark">Send test event</SubmitButton>
+        </ActionForm>
+      </Card>
+
+      <Card title="What gets tracked">
+        <ul className="grid gap-2 text-sm sm:grid-cols-2">
+          {[
+            ["PageView", "every page (browser)"], ["ViewContent", "product page"], ["Search", "typed, voice and photo search"], ["AddToCart", "add to bag"],
+            ["AddToWishlist", "heart button"], ["InitiateCheckout", "checkout or product-page order form"], ["AddPaymentInfo", "payment chosen"], ["Purchase", "thank-you page + server, value = order total in BDT"],
+          ].map(([e, d]) => <li key={e} className="rounded-xl bg-paper px-3 py-2"><b className="font-mono">{e}</b> <span className="text-slate">— {d}</span></li>)}
+        </ul>
+        <p className="mt-3 text-sm text-slate">Content IDs are your variant SKUs, matching the catalogue feed: <a href={feed} className="break-all font-mono text-electric underline">{feed}</a> — add it in Meta Commerce Manager and TikTok Catalog for dynamic product ads. Orders keep their UTM source and click IDs (fbclid / ttclid), shown on each order and in Analytics.</p>
+      </Card>
+
+      <Card title="Recent server events">
+        {events.length === 0 ? <p className="text-sm text-slate">No server events yet. They appear here once a token is saved and customers browse or order.</p> : (
+          <ul className="divide-y divide-line text-sm">
+            {events.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                <span className="w-32 text-xs text-slate">{formatDateTime(e.created_at)}</span>
+                <Badge tone={e.status === "sent" ? "green" : e.status === "failed" ? "red" : "gray"}>{e.status}</Badge>
+                <b>{e.platform === "meta" ? "Meta" : "TikTok"}</b>
+                <span className="font-mono">{e.event_name}</span>
+                {e.order_number && <span className="text-slate">{e.order_number}</span>}
+                {e.test_mode && <Badge tone="amber">test</Badge>}
+                {e.detail && <span className="min-w-0 basis-full truncate text-xs text-slate sm:basis-auto sm:flex-1">{e.detail}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

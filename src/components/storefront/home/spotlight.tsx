@@ -20,7 +20,7 @@ export function Spotlight({ product, specs }: { product: ProductCard; specs: { l
   const was = compareAtPrice(product, variant);
 
   const add = () => {
-    cart.add({ variantId: variant.id, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: variant.stock });
+    cart.add({ variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: variant.stock });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };

@@ -1,12 +1,13 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import { track } from "@/lib/tracking/client";
 
 /**
  * Guest cart kept in localStorage. Prices stored here are for display only —
  * checkout re-prices every line from the database.
  */
 export type CartItem = {
-  variantId: string; productId: string; slug: string; name: string; variantName: string;
+  variantId: string; productId: string; slug: string; name: string; variantName: string; sku?: string; category?: string;
   image: string | null; unitPrice: number; quantity: number; maxStock: number;
 };
 type State = { items: CartItem[]; open: boolean; lastAdded: string | null; hydrated: boolean };
@@ -55,6 +56,7 @@ export const cart = {
       ? state.items.map((i) => (i.variantId === item.variantId ? { ...i, ...item, quantity: Math.min(cap, i.quantity + quantity) } : i))
       : [...state.items, { ...item, quantity: Math.min(cap, quantity) }];
     set({ items: items.filter((i) => i.quantity > 0), lastAdded: item.variantId });
+    track("AddToCart", { value: item.unitPrice * quantity, items: [{ id: item.sku ?? item.variantId, name: item.name, quantity, price: item.unitPrice, category: item.category }] });
   },
   setQuantity(variantId: string, quantity: number) {
     set({ items: state.items.map((i) => (i.variantId === variantId ? { ...i, quantity: Math.max(1, Math.min(20, Math.min(i.maxStock || 20, quantity))) } : i)) });

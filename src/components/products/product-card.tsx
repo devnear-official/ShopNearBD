@@ -40,7 +40,7 @@ export function ProductCard({ product, priority, className, tone = "light", larg
     if (!variant || variant.stock <= 0) return;
     setStatus("adding");
     cart.add({
-      variantId: variant.id, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name,
+      variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name,
       image: img?.url ?? null, unitPrice: price, maxStock: variant.stock,
     });
     // brief confirmation; the header badge also pulses

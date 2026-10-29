@@ -34,7 +34,8 @@ export type HomepageSettings = {
   hero_eyebrow: string; hero_title: string; hero_title_accent: string; hero_subtitle: string; hero_product_slug: string | null;
   campaign_title: string; campaign_body: string; campaign_collection: string; marquee: string[];
 };
-export type PublicSettings = { store: StoreSettings; shipping: ShippingSettings; payments: PaymentSettings; policies: PolicySettings; homepage: HomepageSettings };
+export type TrackingSettings = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
+export type PublicSettings = { store: StoreSettings; shipping: ShippingSettings; payments: PaymentSettings; policies: PolicySettings; homepage: HomepageSettings; tracking?: TrackingSettings };
 
 /** Card columns + aggregated images/variants in one round trip. */
 export const cardSelect = (tx: Tx) => tx`

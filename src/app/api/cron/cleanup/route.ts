@@ -11,5 +11,9 @@ export async function GET(req: NextRequest) {
   const s = await aiSettings();
   await purgeOld(s.retention_days);
   await system((tx) => tx`delete from public.rate_limits where window_start < now() - interval '1 day'`);
+  // Ad-matching data (IP, user agent, browser IDs) is useless after 8 days (Meta accepts events up to 7 days old).
+  await system((tx) => tx`update public.orders set attribution = attribution - 'ip' - 'user_agent' - 'fbp' - 'fbc' - 'ttp'
+    where created_at < now() - interval '8 days' and attribution ?| array['ip', 'user_agent', 'fbp', 'fbc', 'ttp']`);
+  await system((tx) => tx`delete from public.tracking_events where created_at < now() - interval '90 days'`);
   return NextResponse.json({ ok: true, retention_days: s.retention_days });
 }

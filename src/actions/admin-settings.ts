@@ -67,6 +67,25 @@ function build(key: string, f: FormData): { value?: unknown; error?: string; isP
       }).safeParse({ enabled: on(f.get("enabled")), model: str(f, "model"), temperature: Number(str(f, "temperature")), max_output_tokens: Number(str(f, "max_output_tokens")), per_ip_per_minute: Number(str(f, "per_ip_per_minute")), per_conversation_per_hour: Number(str(f, "per_conversation_per_hour")), retention_days: Number(str(f, "retention_days")), greeting: str(f, "greeting") });
       return r.success ? { value: r.data, isPublic: false } : { error: r.error.issues[0].message, isPublic: false };
     }
+    case "tracking": {
+      const r = z.object({
+        meta_pixel_id: z.string().regex(/^(\d{10,20})?$/, "Meta Pixel ID is the 15–16 digit number from Events Manager"),
+        tiktok_pixel_id: z.string().regex(/^([A-Z0-9]{10,30})?$/, "TikTok Pixel ID looks like C1A2B3C4D5E6F7G8H9I0 (letters and digits)"),
+        purchase_trigger: z.enum(["placed", "confirmed"]), tiktok_purchase_event: z.enum(["Purchase", "CompletePayment"]), server_events: z.boolean(),
+      }).safeParse({ meta_pixel_id: str(f, "meta_pixel_id").replace(/\s/g, ""), tiktok_pixel_id: str(f, "tiktok_pixel_id").replace(/\s/g, "").toUpperCase(), purchase_trigger: str(f, "purchase_trigger"), tiktok_purchase_event: str(f, "tiktok_purchase_event"), server_events: on(f.get("server_events")) });
+      return r.success ? { value: r.data, isPublic: true } : { error: r.error.issues[0].message, isPublic: true };
+    }
+    case "tracking_secrets": {
+      // Blank token fields keep the saved token (they are never sent back to the browser).
+      const r = z.object({
+        meta_access_token: z.string().max(400).regex(/^[A-Za-z0-9_-]*$/, "That doesn't look like a Meta access token"),
+        meta_test_event_code: z.string().max(40).regex(/^[A-Za-z0-9]*$/, "Test event code: letters and digits only"),
+        tiktok_access_token: z.string().max(400).regex(/^[A-Za-z0-9_-]*$/, "That doesn't look like a TikTok access token"),
+        tiktok_test_event_code: z.string().max(40).regex(/^[A-Za-z0-9]*$/, "Test event code: letters and digits only"),
+      }).safeParse({ meta_access_token: str(f, "meta_access_token"), meta_test_event_code: str(f, "meta_test_event_code"), tiktok_access_token: str(f, "tiktok_access_token"), tiktok_test_event_code: str(f, "tiktok_test_event_code") });
+      if (!r.success) return { error: r.error.issues[0].message, isPublic: false };
+      return { value: { ...r.data, clear_meta: on(f.get("clear_meta")), clear_tiktok: on(f.get("clear_tiktok")) }, isPublic: false };
+    }
   }
   return { error: "Unknown settings section", isPublic: false };
 }
@@ -78,9 +97,17 @@ export async function saveSettings(_: ActionState, form: FormData): Promise<Acti
   try {
     const admin = await requireAdmin();
     await admin.db(async (tx) => {
+      if (key === "tracking_secrets") {
+        const [old] = await tx<{ value: Record<string, string> }[]>`select value from public.site_settings where key = 'tracking_secrets'`;
+        const v = built.value as Record<string, string | boolean>;
+        const keep = (k: string, clear: boolean) => (clear ? "" : (v[k] as string) || old?.value?.[k] || "");
+        built.value = { meta_access_token: keep("meta_access_token", v.clear_meta === true), meta_test_event_code: v.meta_test_event_code, tiktok_access_token: keep("tiktok_access_token", v.clear_tiktok === true), tiktok_test_event_code: v.tiktok_test_event_code };
+      }
+      // Never copy access tokens into the audit log.
+      const audited = key === "tracking_secrets" ? { tokens: "updated" } : built.value;
       await tx`insert into public.site_settings (key, value, is_public, updated_by, updated_at) values (${key}, ${tx.json(built.value as never)}, ${built.isPublic}, ${admin.id}, now())
         on conflict (key) do update set value = excluded.value, updated_by = excluded.updated_by, updated_at = now()`;
-      await tx`insert into public.audit_logs (actor_id, actor_label, action, entity, entity_id, data) values (${admin.id}, ${admin.email ?? "admin"}, 'settings.update', 'settings', ${key}, ${tx.json(built.value as never)})`;
+      await tx`insert into public.audit_logs (actor_id, actor_label, action, entity, entity_id, data) values (${admin.id}, ${admin.email ?? "admin"}, 'settings.update', 'settings', ${key}, ${tx.json(audited as never)})`;
     });
     updateTag("settings");
     revalidatePath("/admin/settings");

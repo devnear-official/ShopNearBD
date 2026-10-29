@@ -38,6 +38,8 @@ test("touch targets on the phone product page are at least 40px", async ({ page 
   const small = await page.evaluate(() =>
     Array.from(document.querySelectorAll<HTMLElement>("main button, main a, main select, main input"))
       .filter((el) => el.offsetParent !== null && !el.closest("nav[aria-label=Breadcrumb]") && !el.matches(".sr-only"))
+      // A radio/checkbox inside a big clickable label: the label is the touch target.
+      .filter((el) => !(el.matches("input[type=radio], input[type=checkbox]") && (el.closest("label")?.getBoundingClientRect().height ?? 0) >= 40))
       .map((el) => ({ el: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 30), ...el.getBoundingClientRect().toJSON() }))
       .filter((r) => r.height < 40 && r.width < 200 && r.height > 0));
   expect(small, JSON.stringify(small)).toEqual([]);
