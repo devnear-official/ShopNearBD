@@ -106,6 +106,10 @@ async function ThankYou({ params, searchParams }: Props) {
         </dl>
         <p className="mt-4 flex gap-2 text-sm text-slate"><MapPin className="mt-0.5 size-4 shrink-0 text-tangerine" />{o.address}{o.area ? `, ${o.area}` : ""}, {o.district}</p>
       </section>
+      <Link href={`/account/login?next=/account`} className="mt-6 flex items-center justify-between gap-3 rounded-[1.5rem] bg-white p-5 shadow-[var(--shadow-card)]">
+        <span className="min-w-0"><b className="block">Your account is ready</b><span className="text-sm text-slate">Log in any time with {o.phone_masked} (we text you a code) to see this and all your orders.</span></span>
+        <span className="shrink-0 rounded-full bg-electric px-4 py-2 text-sm font-semibold text-white">My account</span>
+      </Link>
       <p className="mt-6 text-center text-sm text-slate">This page and your tracking link are private. They&apos;re saved on this device under <Link href="/order" className="font-semibold text-electric underline">Track my order</Link>.</p>
     </>
   );

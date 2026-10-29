@@ -5,16 +5,24 @@ import { sha256 } from "@/lib/tokens";
 import { friendlyError } from "@/lib/errors";
 import { bdPhone } from "@/lib/validation/common";
 import { clientIpHash, rateLimit } from "@/lib/rate-limit";
+import { ownOrderHash } from "@/lib/customer/auth";
 
-const access = z.object({ orderNumber: z.string().regex(/^SN\d{11}$/), token: z.string().regex(/^[A-Za-z0-9_-]{20,128}$/) });
+// The private link token, or "" when a signed-in customer opened their own order.
+const access = z.object({ orderNumber: z.string().regex(/^SN\d{11}$/), token: z.union([z.literal(""), z.string().regex(/^[A-Za-z0-9_-]{20,128}$/)]) });
+
+async function accessHash(orderNumber: string, token: string) {
+  return token ? sha256(token) : ownOrderHash(orderNumber);
+}
 
 export async function submitPaymentLater(input: unknown): Promise<{ ok: boolean; error?: string }> {
   const parsed = access.extend({ sender: bdPhone, txid: z.string().trim().regex(/^[A-Za-z0-9]{6,20}$/, "Enter the Transaction ID from the SMS") }).safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details and try again." };
   const { orderNumber, token, sender, txid } = parsed.data;
   if (!(await rateLimit(`paylater:${await clientIpHash()}`, 10, 3600))) return { ok: false, error: friendlyError({ message: "RATE_LIMITED" }) };
+  const hash = await accessHash(orderNumber, token);
+  if (!hash) return { ok: false, error: "Please open this order from your account or its private link." };
   try {
-    await asAnon((tx) => tx`select public.submit_payment_proof(${orderNumber}, ${sha256(token)}, ${sender}, ${txid}, ${null})`);
+    await asAnon((tx) => tx`select public.submit_payment_proof(${orderNumber}, ${hash}, ${sender}, ${txid}, ${null})`);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: friendlyError(e) };
@@ -31,8 +39,10 @@ export async function submitReview(input: unknown): Promise<{ ok: boolean; error
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the review and try again." };
   const { orderNumber, token, productId, author, rating, body } = parsed.data;
   if (!(await rateLimit(`review:${await clientIpHash()}`, 20, 3600))) return { ok: false, error: friendlyError({ message: "RATE_LIMITED" }) };
+  const hash = await accessHash(orderNumber, token);
+  if (!hash) return { ok: false, error: "Please open this order from your account or its private link." };
   try {
-    await asAnon((tx) => tx`select public.submit_review(${orderNumber}, ${sha256(token)}, ${productId}, ${author}, ${rating}, ${body ?? null})`);
+    await asAnon((tx) => tx`select public.submit_review(${orderNumber}, ${hash}, ${productId}, ${author}, ${rating}, ${body ?? null})`);
     return { ok: true };
   } catch (e) {
     const msg = (e as Error).message === "REVIEW_NOT_ALLOWED" ? "Reviews open once the order is delivered." : friendlyError(e);

@@ -15,7 +15,7 @@ import { placeOrder, quoteCart, type Quote } from "@/actions/checkout";
 import { Stepper } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
 import { readAttribution, track } from "@/lib/tracking/client";
-import { Field, ManualPayment, METHOD_TITLE, METHODS, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
+import { Field, ManualPayment, METHOD_TITLE, METHODS, accountDelivery, couponMessage, newKeys, rememberOrder, validateManual, type Keys, type Method } from "./fields";
 
 type Props = {
   product: ProductDetail; variant: Variant | undefined; onVariant: (v: Variant) => void;
@@ -64,6 +64,7 @@ export function QuickOrder({ product, variant, onVariant, qty, maxQty, onQty, pr
       const d = JSON.parse(localStorage.getItem("sn_delivery") ?? "null");
       const pickedDistrict = localStorage.getItem("sn_district");
       form.reset({ ...form.getValues(), ...(d ?? {}), ...(!d?.district && pickedDistrict && DISTRICTS.includes(pickedDistrict) ? { district: pickedDistrict } : {}) });
+      if (!d) void accountDelivery().then((a) => { if (a && !form.formState.isDirty) form.reset({ ...form.getValues(), ...a }); });
     } catch {}
   }, [form]);
 

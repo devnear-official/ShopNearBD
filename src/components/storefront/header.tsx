@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Menu, Search, ShoppingBag, X, PackageSearch, ArrowUpRight, Heart } from "lucide-react";
+import { ArrowUpRight, Heart, Menu, PackageSearch, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";
 import { Streaks } from "@/components/ui/streaks";
@@ -120,6 +120,9 @@ export function Header({ categories }: { categories: Cat[] }) {
             <Link href="/order" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Track your orders" title="Track your orders">
               <PackageSearch className="size-5" />
             </Link>
+            <Link href="/account" className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-cloud" aria-label="My account" title="My account">
+              <UserRound className="size-5" />
+            </Link>
             <button
               type="button"
               onClick={() => cart.open()}
@@ -176,6 +179,7 @@ export function Header({ categories }: { categories: Cat[] }) {
                 <Link href="/order" className="rounded-2xl bg-white/10 p-4 font-semibold">Track my order</Link>
                 <Link href="/help" className="rounded-2xl bg-white/10 p-4 font-semibold">Help & policies</Link>
                 <Link href="/wishlist" className="rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist</Link>
+                <Link href="/account" className="rounded-2xl bg-electric p-4 font-semibold">My account</Link>
               </div>
               <Streaks tone="light" className="mt-10 h-8 w-16 opacity-60" />
             </nav>
