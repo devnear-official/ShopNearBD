@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+/*
+ * ShopNear BD — "Speed Lane" design system
+ * Derived from the logo: speed streaks, the swoosh underline, the shopping-tag
+ * bag. Paper-light surfaces, deep navy ink, electric blue for action, tangerine
+ * reserved for price and urgency.
+ */
+@theme {
+  --color-ink: #0b1530;
+  --color-ink-2: #18233f;
+  --color-ink-3: #2a3657;
+  --color-slate: #5b6683;
+  --color-mist: #8d97b0;
+  --color-line: #dfe5f0;
+  --color-cloud: #e9eef7;
+  --color-paper: #f4f7fc;
+  --color-snow: #ffffff;
+  --color-electric: #1e6bff;
+  --color-electric-deep: #0f4fd6;
+  --color-sky: #2fc6ff;
+  --color-tangerine: #ff7a1a;
+  --color-flame: #ff4d2e;
+  --color-sun: #ffb020;
+  --color-mint: #10b981;
+  --color-rose: #f43f5e;
+
+  --font-display: "Bricolage Grotesque Variable", "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", "Hind Siliguri", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-bangla: "Hind Siliguri", "Figtree Variable", sans-serif;
+
+  --radius-tag: 1.75rem;
+  --radius-chip: 999px;
+
+  --shadow-float: 0 30px 60px -28px rgb(11 21 48 / 0.35), 0 12px 24px -16px rgb(11 21 48 / 0.18);
+  --shadow-lift: 0 18px 40px -22px rgb(30 107 255 / 0.55);
+  --shadow-card: 0 1px 0 rgb(11 21 48 / 0.04), 0 10px 30px -20px rgb(11 21 48 / 0.25);
+
+  --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --ease-soft: cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-orbit: orbit 60s linear infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes orbit {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 5.5rem;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  :lang(bn), .bn {
+    font-family: var(--font-bangla);
+    line-height: 1.55;
+  }
+  ::selection {
+    background: var(--color-electric);
+    color: white;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-electric);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  button, [role="button"], a, label, select, summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, select, textarea {
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variation-settings: "opsz" 96, "wdth" 92;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+  }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .text-gradient {
+    background: linear-gradient(100deg, var(--color-electric-deep) 0%, var(--color-electric) 45%, var(--color-sky) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* The shopping-tag punch hole used on cards and stickers. */
+  .tag-hole {
+    -webkit-mask: radial-gradient(circle at 1.6rem 1.6rem, transparent 0.42rem, #000 0.46rem);
+    mask: radial-gradient(circle at 1.6rem 1.6rem, transparent 0.42rem, #000 0.46rem);
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-cloud) 25%, #f7f9fd 50%, var(--color-cloud) 75%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+  .input {
+    width: 100%;
+    min-height: 3rem;
+    border-radius: 0.9rem;
+    border: 1.5px solid var(--color-line);
+    background: white;
+    padding: 0.7rem 0.95rem;
+    color: var(--color-ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-electric);
+    box-shadow: 0 0 0 4px rgb(30 107 255 / 0.14);
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-flame);
+  }
+  .label {
+    display: block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--color-ink-2);
+  }
+  .field-error {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: #c2321a;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Motion is decoration, never a requirement. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Phones: hide the floating chat button while the product-page order form is on screen. */
+@media (max-width: 639px) {
+  html[data-quick-order="1"] [data-chat-launcher] { display: none; }
+}
