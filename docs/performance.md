@@ -78,3 +78,23 @@ What changed:
 - **Bug fix:** checkout re-requested a server quote about 4 times a second while open (each quote updated the cart, which triggered the next). Now one quote per real change.
 
 Still to check on the live site: hosting region. If the server functions run far from the database (e.g. US servers with a Singapore/Mumbai database), every uncached page waits several round trips. Put both in the same region (on Vercel: Project → Settings → Functions → Region, matching your Supabase region).
+
+## Admin panel at 60,000 orders (29 Oct 2026)
+
+Synthetic data: 60k orders / ~100k order lines, requests made as the admin (Row Level Security applies), median of 5, local database.
+
+| Page | Before | After |
+|---|---:|---:|
+| Orders list | 2,256 ms | 117 ms |
+| Orders search (phone) | 2,503 ms | 246 ms |
+| Customers | 1,869 ms | 118 ms |
+| Analytics (30 days = 43k orders) | 9,090 ms | ~1,500 ms |
+| Dashboard | 375 ms | ~340 ms |
+
+What it was: the RLS policies called `is_admin()` once **per row** (`select count(*) from orders` took 1.07 s as admin, 7 ms as superuser). Wrapping it as `(select is_admin())` makes Postgres evaluate it once per query (migration `20261029001100_rls_initplan.sql`). On top of that: the Customers page and the repeat-customer metric aggregated every order per request (now the trigger-maintained `customer_stats` table), order search gained trigram indexes on order number and phone, and the analytics query reads order lines once.
+
+Per request, the admin used to ask Supabase Auth three times (proxy, layout, page) plus a transaction for the role check; pages now verify the JWT locally (`getClaims`), the proxy still confirms the session with Supabase Auth, the result is shared across layout/nav/page for the request, and server actions still call Supabase Auth directly. The role-switch inside each query transaction is one statement instead of two.
+
+## Customer check (order page)
+
+`customer_risk(phone)` returns the store's own history for the phone: orders, delivered / cancelled / returned, orders in the last 24 h, distinct names and addresses, and per-courier parcels (delivered, returned, in transit). `lib/risk.ts` turns that into Low / Medium / High with reasons. Couriers do not expose other merchants' delivery history through their public APIs, so this is the store's own data across all of its couriers; the order page also offers one-tap WhatsApp confirmation (a `wa.me` link with the order details pre-filled) and Call.

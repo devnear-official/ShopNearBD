@@ -13,14 +13,16 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const from = new Date(to.getTime() - range * 86400000);
   const [summary, daily, byMethod, byCategory, byZone, coupons, ai, byChannel] = await admin.db((tx) => Promise.all([
     tx<{ orders: number; placed_value: number; delivered: number; delivered_value: number; cancelled: number; returned: number; customers: number; repeat_customers: number; units: number; gross_profit: number | null }[]>`
-      with o as (select * from public.orders where created_at between ${from} and ${to})
+      with o as (select * from public.orders where created_at between ${from} and ${to}),
+        -- the order lines are read once and shared by units and profit
+        lines as (select o.status, i.quantity, i.line_total, p.cost_price from o join public.order_items i on i.order_id = o.id left join public.products p on p.id = i.product_id)
       select count(*)::int as orders, coalesce(sum(total) filter (where status <> 'cancelled'), 0) as placed_value,
         count(*) filter (where status = 'delivered')::int as delivered, coalesce(sum(total) filter (where status = 'delivered'), 0) as delivered_value,
         count(*) filter (where status = 'cancelled')::int as cancelled, count(*) filter (where status = 'returned')::int as returned,
         count(distinct phone)::int as customers,
-        (select count(*)::int from (select phone from public.orders where phone in (select phone from o) group by phone having count(*) > 1) r) as repeat_customers,
-        (select coalesce(sum(i.quantity), 0)::int from public.order_items i join o on o.id = i.order_id where o.status <> 'cancelled') as units,
-        (select sum(i.line_total - i.quantity * p.cost_price) from public.order_items i join o on o.id = i.order_id join public.products p on p.id = i.product_id where o.status = 'delivered' and p.cost_price is not null) as gross_profit
+        (select count(*)::int from public.customer_stats s where s.orders > 1 and s.phone in (select phone from o)) as repeat_customers,
+        (select coalesce(sum(quantity) filter (where status <> 'cancelled'), 0)::int from lines) as units,
+        (select sum(line_total - quantity * cost_price) filter (where status = 'delivered' and cost_price is not null) from lines) as gross_profit
       from o`,
     tx<{ day: string; orders: number; value: number }[]>`select to_char(date_trunc('day', created_at at time zone 'Asia/Dhaka'), 'YYYY-MM-DD') as day, count(*)::int as orders, coalesce(sum(total) filter (where status <> 'cancelled'), 0) as value from public.orders where created_at between ${from} and ${to} group by 1`,
     tx<{ method: string; n: number; value: number }[]>`select payment_method as method, count(*)::int as n, coalesce(sum(total), 0) as value from public.orders where created_at between ${from} and ${to} and status <> 'cancelled' group by 1 order by 2 desc`,

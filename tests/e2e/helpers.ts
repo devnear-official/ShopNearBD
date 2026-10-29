@@ -16,8 +16,17 @@ export function collectErrors(page: Page) {
 
 export const ADMIN_STATE = "test-results/.auth/admin.json";
 
-/** Navigate and give client components a moment to hydrate. */
+/**
+ * Streamed sections (Suspense) arrive in a hidden copy that React swaps in a few hundred ms after
+ * `load`; during that window the same text exists twice and strict locators fail. Wait for the swap.
+ */
+export async function streamed(page: Page) {
+  await page.waitForFunction(() => !document.querySelector('[hidden][id^="S:"], template[id^="B:"]'), undefined, { timeout: 10_000 }).catch(() => {});
+}
+
+/** Navigate, wait for streamed content to settle, and give client components a moment to hydrate. */
 export async function visit(page: Page, path: string) {
   await page.goto(path, { waitUntil: "load" });
+  await streamed(page);
   await page.waitForTimeout(400);
 }

@@ -16,6 +16,9 @@ import { flyToCart } from "@/lib/fly-to-cart";
 import { Stepper } from "@/components/cart/cart-drawer";
 import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
+import { CapsuleShine } from "@/components/ui/capsule";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { waLink } from "@/lib/whatsapp";
 import { ProductGallery } from "./product-gallery";
 import { WishlistButton } from "./wishlist";
 import { track } from "@/lib/tracking/client";
@@ -27,7 +30,7 @@ const QuickOrder = dynamic(() => import("@/components/checkout/quick-order").the
   loading: () => <div id="order-now" aria-busy="true" className="skeleton mt-16 h-[44rem] scroll-mt-24 rounded-[2.25rem] lg:h-[34rem]" />,
 });
 
-export function ProductExperience({ product, shipping, payments, children }: { product: ProductDetail; shipping: ShippingSettings; payments: PaymentSettings; children?: React.ReactNode }) {
+export function ProductExperience({ product, shipping, payments, whatsapp, children }: { product: ProductDetail; shipping: ShippingSettings; payments: PaymentSettings; whatsapp?: string; children?: React.ReactNode }) {
   const options = product.option_names.filter((n) => product.variants.some((v) => v.options[n]));
   const initial = product.variants.find((v) => v.stock > 0) ?? product.variants[0];
   const [selected, setSelected] = useState<Record<string, string>>(() => ({ ...(initial?.options ?? {}) }));
@@ -121,6 +124,18 @@ export function ProductExperience({ product, shipping, payments, children }: { p
     setTimeout(focus, 450);
   };
 
+  /** Pre-filled WhatsApp message with the chosen option, quantity and page link (link added at click time). */
+  const waText = (url?: string) =>
+    `Hi ShopNear BD! I want to order:
+• ${product.name}${variant && variant.name !== "Default" ? ` (${variant.name})` : ""} × ${qty}
+Price: ${formatTaka(price * qty)}${url ? `
+${url}` : ""}`;
+  const waHref = waLink(whatsapp, waText());
+  const openWhatsApp = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const href = waLink(whatsapp, waText(window.location.origin + window.location.pathname));
+    if (href) e.currentTarget.href = href;
+  };
+
   const valueState = (name: string, value: string) => {
     const candidate = product.variants.find((v) => v.options[name] === value && options.every((o) => o === name || v.options[o] === selected[o]))
       ?? product.variants.find((v) => v.options[name] === value);
@@ -192,6 +207,14 @@ export function ProductExperience({ product, shipping, payments, children }: { p
               <Zap className="size-5 shrink-0" /> Buy now
             </Button>
           </div>
+          {waHref && stock > 0 && (
+            <a href={waHref} onClick={openWhatsApp} target="_blank" rel="noopener noreferrer"
+              className="group/cap relative mt-3 flex h-14 w-full select-none items-center justify-center gap-2.5 overflow-hidden rounded-full bg-[#1fae54] text-base font-semibold text-white shadow-[0_14px_30px_-16px_rgb(31_174_84/0.8)] transition-[transform,background-color] duration-200 hover:bg-[#189b49] active:scale-[0.97]">
+              <CapsuleShine />
+              <WhatsAppIcon className="relative size-6" />
+              <span className="relative">Order on WhatsApp</span>
+            </a>
+          )}
           {stock <= 0 && <p className="mt-3 text-sm text-slate">This option is sold out. Try another option or ask us on chat when it&apos;s back.</p>}
 
           <DeliveryEstimator shipping={shipping} subtotal={price * qty} />
@@ -226,6 +249,10 @@ export function ProductExperience({ product, shipping, payments, children }: { p
                 <p className="truncate text-sm font-semibold">{product.name}{variant && variant.name !== "Default" ? ` · ${variant.name}` : ""}</p>
                 <p className="font-display font-bold">{formatTaka(price)}</p>
               </div>
+              {waHref && stock > 0 && (
+                <a href={waHref} onClick={openWhatsApp} target="_blank" rel="noopener noreferrer" aria-label="Order on WhatsApp"
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-[#1fae54] text-white transition active:scale-95"><WhatsAppIcon className="size-6" /></a>
+              )}
               <Button size="md" onClick={(e) => add(e.currentTarget)} disabled={stock <= 0}>{added ? <Check className="size-5" /> : <ShoppingBag className="size-5" />}<span className="sr-only sm:not-sr-only">Add</span></Button>
               <Button size="md" variant="dark" onClick={buyNow} disabled={stock <= 0} aria-controls="order-now">Buy now</Button>
             </div>
