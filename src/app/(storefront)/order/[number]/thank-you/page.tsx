@@ -52,8 +52,8 @@ async function ThankYou({ params, searchParams }: Props) {
       <section className="relative overflow-hidden rounded-[2.5rem] bg-ink p-7 text-white sm:p-10">
         <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full bg-electric/40 blur-[90px]" />
         <CheckCircle2 className="relative size-12 text-mint" />
-        <h1 className="display relative mt-5 text-[clamp(2.6rem,8vw,4.6rem)]">Thank you, {firstName}!</h1>
-        <p className="bn relative mt-1 text-lg text-white/70" lang="bn">ধন্যবাদ! আপনার অর্ডার আমরা পেয়েছি।</p>
+        <h1 className="display relative mt-5 t-page">Thank you, {firstName}!</h1>
+        <p className="bn relative mt-1 text-base sm:text-lg text-white/70" lang="bn">ধন্যবাদ! আপনার অর্ডার আমরা পেয়েছি।</p>
         <dl className="relative mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Order number</dt><dd className="mt-1 font-mono text-lg font-bold">{o.order_number}</dd></div>
           <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Total</dt><dd className="mt-1 font-display text-2xl font-bold">{formatTaka(o.total)}</dd></div>
@@ -88,7 +88,7 @@ async function ThankYou({ params, searchParams }: Props) {
       </ol>
 
       <section aria-labelledby="ty-items" className="mt-6 rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
-        <h2 id="ty-items" className="display text-2xl">Your order</h2>
+        <h2 id="ty-items" className="display t-card">Your order</h2>
         <ul className="mt-3 divide-y divide-line">
           {o.items.map((i, k) => (
             <li key={k} className="flex items-center gap-3 py-3">
@@ -106,6 +106,10 @@ async function ThankYou({ params, searchParams }: Props) {
         </dl>
         <p className="mt-4 flex gap-2 text-sm text-slate"><MapPin className="mt-0.5 size-4 shrink-0 text-tangerine" />{o.address}{o.area ? `, ${o.area}` : ""}, {o.district}</p>
       </section>
+      <Link href={`/account/login?next=/account`} className="mt-6 flex items-center justify-between gap-3 rounded-[1.5rem] bg-white p-5 shadow-[var(--shadow-card)]">
+        <span className="min-w-0"><b className="block">Your account is ready</b><span className="text-sm text-slate">Log in any time with {o.phone_masked} (we text you a code) to see this and all your orders.</span></span>
+        <span className="shrink-0 rounded-full bg-electric px-4 py-2 text-sm font-semibold text-white">My account</span>
+      </Link>
       <p className="mt-6 text-center text-sm text-slate">This page and your tracking link are private. They&apos;re saved on this device under <Link href="/order" className="font-semibold text-electric underline">Track my order</Link>.</p>
     </>
   );

@@ -33,7 +33,7 @@ export function CartDrawer({ freeShippingThreshold }: { freeShippingThreshold: n
             className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-paper shadow-2xl sm:rounded-l-[2rem]"
           >
             <div className="flex items-center justify-between px-5 pb-3 pt-5">
-              <h2 id="cart-title" className="display text-3xl">Your bag <span className="text-mist">({count})</span></h2>
+              <h2 id="cart-title" className="display t-sub">Your bag <span className="text-mist">({count})</span></h2>
               <button type="button" onClick={cart.close} className="grid size-11 place-items-center rounded-full bg-white shadow-[var(--shadow-card)]" aria-label="Close cart">
                 <X className="size-5" />
               </button>
@@ -52,7 +52,7 @@ export function CartDrawer({ freeShippingThreshold }: { freeShippingThreshold: n
               {state.items.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <Streaks className="mb-6 h-10 w-20" />
-                  <p className="display text-2xl">Your bag is empty</p>
+                  <p className="display t-card">Your bag is empty</p>
                   <p className="mt-2 max-w-xs text-slate">Find something you like — it&apos;s closer than you think.</p>
                   <ButtonLink href="/shop" onClick={cart.close} className="mt-6">Start shopping</ButtonLink>
                 </div>

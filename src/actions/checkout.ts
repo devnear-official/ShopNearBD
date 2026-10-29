@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { requestContext, sendPurchase, trackingConfig } from "@/lib/tracking/server";
 import { buildAttribution, saveAttribution } from "@/lib/tracking/attribution";
+import { ensureAccount } from "@/lib/customer/auth";
 
 export type QuoteLine = { variant_id: string; sku?: string; product_id: string; slug: string; name: string; variant_name: string; unit_price: number; quantity: number; line_total: number; stock: number; image_url: string | null };
 export type Quote = {
@@ -105,6 +106,8 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
       const attr = buildAttribution(attribution, ctx);
       await saveAttribution(row.r.order_id, attr);
       const orderId = row.r.order_id;
+      // Every phone that orders gets an account; logging in with an SMS code later shows all its orders.
+      await ensureAccount(delivery.phone, delivery.name);
       after(async () => {
         const cfg = await trackingConfig();
         if (cfg.purchaseTrigger === "placed") await sendPurchase(orderId, { ...ctx, ttclid: attr.ttclid ?? null, referrer: attr.referrer ?? null });

@@ -18,6 +18,7 @@ A complete e-commerce platform for a Bangladesh-based shop: an art-directed stor
 - **Voice search** (mic button in search; বাংলা or English) and **photo search** (camera button: snap or upload a picture) — see "Voice & photo search".
 - **Facebook (Meta) and TikTok pixels + server-side events** — see "Ads tracking".
 - Private order pages (`/order/SN…?t=<secret>`) with a status timeline, payment status, courier tracking and review forms after delivery.
+- **Customer accounts** (`/account`): every phone number that orders gets an account automatically; customers log in with a 6-digit SMS code (no password) and see all orders on their number, status, totals and their details, open any of their orders without the private link, and get checkout pre-filled. See "Customer login (SMS)".
 - Guest wishlist (♡ on cards and product pages, `/wishlist`), kept on the device; prices shown are live.
 - Floating support chat (Bangla, Banglish, English) with human hand-off.
 - Mobile-first, keyboard accessible, `prefers-reduced-motion` respected, no horizontal overflow from 320 px to 1920 px.
@@ -86,6 +87,8 @@ Then open http://localhost:3000 and http://localhost:3000/admin.
 | `ALLOW_SANDBOX_COURIER` | server | `1` lets the sandbox courier be used in a production build (staging). Off by default. |
 | `STEADFAST_*`, `PATHAO_*`, `REDX_*` | server | Courier credentials and webhook secrets — see below. |
 | `DB_POOL_MAX` | server | Optional pool size per server instance (default 5). |
+| `SMS_PROVIDER` + `BULKSMSBD_API_KEY`, `BULKSMSBD_SENDER_ID` **or** `SSL_SMS_API_TOKEN`, `SSL_SMS_SID` | **server only** | SMS gateway for customer login codes (BulkSMSBD or SSL Wireless). Without it, customer login is off. |
+| `ALLOW_DEV_SMS` | server | `1` allows `SMS_PROVIDER=console` (writes codes to `dev_sms_outbox`, sends nothing) in a production build — staging/tests only. |
 | `META_PIXEL_ID`, `TIKTOK_PIXEL_ID` | build + server | Optional. Override the pixel IDs saved in Admin → Settings → Ads tracking. Storefront pages are prerendered, so set them **before building**; the admin setting needs no rebuild. |
 | `META_CAPI_ACCESS_TOKEN`, `TIKTOK_EVENTS_ACCESS_TOKEN` | **server only** | Optional. Override the tokens saved in the admin. |
 | `META_TEST_EVENT_CODE`, `TIKTOK_TEST_EVENT_CODE` | server | Optional, for testing only. Remove before going live. |
@@ -172,6 +175,16 @@ Verified locally against stand-in Meta/TikTok endpoints (request format, hashing
 
 ---
 
+## Customer login (SMS)
+
+- Placing an order creates an (unverified) account for that phone number; existing customers were backfilled from past orders. Logging in at `/account/login` sends a 6-digit code by SMS; entering it proves the customer owns the number and shows **every order placed with it** — status, items, date, payment method, totals (orders, in progress, delivered, total ordered excluding cancelled/returned) — plus name/email they can edit.
+- Signed-in customers can open their own orders at `/order/SN…` without the private link (pay-later TrxID and reviews work too); orders on other numbers stay private. Checkout and the product-page form are pre-filled from the last order.
+- Security: codes are 6 digits, stored only as a keyed hash, valid 5 minutes, 5 tries, single use. Limits: 1 code per number per minute, 5 per number and 10 per device per hour, 300 store-wide per hour (stops SMS-cost abuse). Sessions are random 256-bit tokens in an `httpOnly` cookie (stored hashed, 60 days, deleted on log-out). The SMS log in Admin → Settings → Customer login keeps only the masked number and gateway response — never the code.
+- **Setup:** open an account with a Bangladeshi SMS gateway, get an approved sender ID, and set `SMS_PROVIDER=bulksmsbd` with `BULKSMSBD_API_KEY` + `BULKSMSBD_SENDER_ID`, or `SMS_PROVIDER=sslwireless` with `SSL_SMS_API_TOKEN` + `SSL_SMS_SID`. Some gateways require whitelisting your server's IP (on Vercel, use a gateway that doesn't, or a static-IP add-on). Then log in yourself once to confirm the SMS arrives.
+- The request formats were checked against the gateways' published integrations and tested against local stand-ins; they have **not** been tested against the live gateways from here.
+
+---
+
 ## Voice & photo search
 
 - **Voice:** the mic button (search panel and the `/shop` search field) uses the browser's own speech recognition where it exists (Chrome, Edge, Safari), in বাংলা (`bn-BD`) or English. The words are searched directly; if a Bangla sentence finds nothing and Gemini is configured, Gemini maps it to catalogue words (`POST /api/search/voice`). Browsers without speech recognition (e.g. Firefox) record up to 8 seconds and Gemini transcribes it — this needs `GEMINI_API_KEY`. The microphone is only used after the shopper taps the mic (`Permissions-Policy: microphone=(self)`).
@@ -226,7 +239,7 @@ Public catalogue pages are prerendered and revalidated (`use cache` with `cacheL
 
 ## Known limitations
 
-- **Customer accounts are not built.** Checkout is guest-only (the norm for COD shops in Bangladesh); carts and wishlists live in the browser, and orders are opened with their private link. The database already has `carts`, `cart_items`, `wishlists` and owner-only RLS policies, so sign-in, a server-side cart and cart merging can be added without schema changes.
+- Customer accounts cover orders and details; the cart and wishlist still live in the browser (not synced across devices). Login needs an SMS gateway.
 - Courier adapters are untested against live APIs (see Couriers). Payment gateways are not integrated (manual verification only).
 - Filtered `/shop` URLs are render-bound at ~50 req/s per server instance on the test machine — see [docs/performance.md](docs/performance.md).
 

@@ -7,7 +7,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {back && <Link href={back.href} className="mb-2 inline-block text-sm font-semibold text-slate hover:text-ink">← {back.label}</Link>}
-        <h1 className="display text-3xl sm:text-4xl">{title}</h1>
+        <h1 className="display t-section">{title}</h1>
         {description && <p className="mt-1 text-sm text-slate">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}

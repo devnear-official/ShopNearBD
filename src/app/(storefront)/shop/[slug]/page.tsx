@@ -131,7 +131,7 @@ async function ProductView({ params }: Params) {
         </ProductExperience>
 
         <section aria-labelledby="reviews" className="mt-20">
-          <h2 id="reviews" className="display text-4xl">Reviews</h2>
+          <h2 id="reviews" className="display t-section">Reviews</h2>
           {reviews.count > 0 ? (
             <>
               <p className="mt-2 flex items-center gap-2 text-slate"><Star className="size-5 fill-sun text-sun" /> <b className="text-ink">{reviews.average}</b> from {reviews.count} verified buyer{reviews.count === 1 ? "" : "s"}</p>
@@ -152,7 +152,7 @@ async function ProductView({ params }: Params) {
 
         {related.length > 0 && (
           <section aria-labelledby="related" className="mt-20">
-            <h2 id="related" className="display mb-8 text-4xl">You might also like</h2>
+            <h2 id="related" className="display mb-8 t-section">You might also like</h2>
             <ProductGrid items={related} />
           </section>
         )}

@@ -29,6 +29,7 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   const buttons = useRef<HTMLDivElement>(null);
   const [pastButtons, setPastButtons] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
+  const [buttonsVisible, setButtonsVisible] = useState(false);
   const showBar = pastButtons && !formVisible;
 
   const variant: Variant | undefined = useMemo(
@@ -63,18 +64,18 @@ export function ProductExperience({ product, shipping, payments, children }: { p
   useEffect(() => {
     const el = buttons.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setPastButtons(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    const io = new IntersectionObserver(([e]) => { setPastButtons(!e.isIntersecting && e.boundingClientRect.top < 0); setButtonsVisible(e.isIntersecting); }, { threshold: 0 });
     io.observe(el);
     const form = document.getElementById("order-now");
     const io2 = new IntersectionObserver(([e]) => setFormVisible(e.isIntersecting), { threshold: 0 });
     if (form) io2.observe(form);
     return () => { io.disconnect(); io2.disconnect(); };
   }, []);
-  // While the order form is on a phone screen, the floating chat button would cover fields.
+  // On phones the floating chat button would cover the buy buttons or the order form; hide it while they're on screen.
   useEffect(() => {
-    document.documentElement.dataset.quickOrder = formVisible ? "1" : "";
+    document.documentElement.dataset.quickOrder = formVisible || buttonsVisible ? "1" : "";
     return () => { document.documentElement.dataset.quickOrder = ""; };
-  }, [formVisible]);
+  }, [formVisible, buttonsVisible]);
   useEffect(() => {
     document.documentElement.style.setProperty("--sticky-bar", showBar ? "84px" : "0px");
     return () => document.documentElement.style.setProperty("--sticky-bar", "0px");
@@ -109,9 +110,9 @@ export function ProductExperience({ product, shipping, payments, children }: { p
 
         <div className="lg:sticky lg:top-28 lg:h-max">
           {product.category && <Link href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</Link>}
-          <h1 className="display mt-3 text-[clamp(2.4rem,6vw,4.2rem)]">{product.name}</h1>
-          {product.name_bn && <p className="bn mt-2 text-lg text-slate" lang="bn">{product.name_bn}</p>}
-          <p className="mt-4 text-lg text-slate">{product.short_description}</p>
+          <h1 className="display mt-3 t-page">{product.name}</h1>
+          {product.name_bn && <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">{product.name_bn}</p>}
+          <p className="mt-4 text-base sm:text-lg text-slate">{product.short_description}</p>
 
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -154,15 +155,18 @@ export function ProductExperience({ product, shipping, payments, children }: { p
             );
           })}
 
-          <div ref={buttons} className="mt-8 flex flex-wrap items-center gap-3">
-            <Stepper value={qty} max={Math.max(1, maxQty)} onChange={setQty} label={product.name} />
-            <Button size="lg" onClick={() => add()} disabled={stock <= 0} className="flex-1 sm:flex-none">
-              {added ? <><Check className="size-5" /> Added to bag</> : <><ShoppingBag className="size-5" /> Add to bag</>}
+          {/* Phones: quantity + save on one row, then two equal buttons that never wrap their labels. */}
+          <div ref={buttons} className="mt-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+            <div className="col-span-2 flex items-center justify-between gap-3 sm:contents">
+              <Stepper value={qty} max={Math.max(1, maxQty)} onChange={setQty} label={product.name} />
+              <WishlistButton slug={product.slug} name={product.name} withLabel className="sm:order-last" />
+            </div>
+            <Button size="lg" onClick={() => add()} disabled={stock <= 0} className="min-w-0 whitespace-nowrap px-3 sm:px-8">
+              {added ? <><Check className="size-5 shrink-0" /> Added</> : <><ShoppingBag className="size-5 shrink-0" /> Add to bag</>}
             </Button>
-            <Button size="lg" variant="dark" onClick={buyNow} disabled={stock <= 0} className="flex-1 sm:flex-none" aria-controls="order-now">
-              <Zap className="size-5" /> Buy now
+            <Button size="lg" variant="dark" onClick={buyNow} disabled={stock <= 0} className="min-w-0 whitespace-nowrap px-3 sm:px-8" aria-controls="order-now">
+              <Zap className="size-5 shrink-0" /> Buy now
             </Button>
-            <WishlistButton slug={product.slug} name={product.name} withLabel />
           </div>
           {stock <= 0 && <p className="mt-3 text-sm text-slate">This option is sold out. Try another option or ask us on chat when it&apos;s back.</p>}
 
@@ -245,7 +249,7 @@ export function RecentlyViewed({ exclude }: { exclude: string }) {
   if (!items.length) return null;
   return (
     <section aria-labelledby="recent" className="mx-auto mt-20 max-w-7xl px-4 sm:px-8">
-      <h2 id="recent" className="display text-3xl">Recently viewed</h2>
+      <h2 id="recent" className="display t-sub">Recently viewed</h2>
       <div className="scrollbar-none -mx-4 mt-5 flex gap-3 overflow-x-auto px-4 pb-2">
         {items.map((i) => (
           <Link key={i.slug} href={`/shop/${i.slug}`} className="w-36 shrink-0">

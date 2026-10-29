@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Menu, Search, ShoppingBag, X, PackageSearch, ArrowUpRight, Heart } from "lucide-react";
+import { ArrowUpRight, Heart, Menu, PackageSearch, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";
 import { Streaks } from "@/components/ui/streaks";
@@ -54,12 +54,12 @@ export function Header({ categories }: { categories: Cat[] }) {
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">
         <div
           className={clsx(
-            "mx-auto flex h-16 max-w-7xl items-center gap-2 rounded-full pl-4 pr-2 transition-all duration-300 sm:pl-6",
+            "mx-auto flex h-16 max-w-7xl items-center gap-1 rounded-full pl-3 pr-1.5 min-[380px]:gap-2 min-[380px]:pl-4 min-[380px]:pr-2 transition-all duration-300 sm:pl-6",
             scrolled ? "bg-white/85 shadow-[var(--shadow-float)] ring-1 ring-ink/5 backdrop-blur-xl" : "bg-white/60 backdrop-blur-md",
           )}
         >
-          <Link href="/" className="mr-2 shrink-0" aria-label="ShopNear BD home">
-            <Logo priority className="h-8 sm:h-9" />
+          <Link href="/" className="mr-1 min-w-0 shrink" aria-label="ShopNear BD home">
+            <Logo priority className="h-7 min-[380px]:h-8 sm:h-9" />
           </Link>
 
           <nav aria-label="Main" className="ml-4 hidden items-center gap-1 lg:flex">
@@ -120,10 +120,13 @@ export function Header({ categories }: { categories: Cat[] }) {
             <Link href="/order" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Track your orders" title="Track your orders">
               <PackageSearch className="size-5" />
             </Link>
+            <Link href="/account" className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-cloud" aria-label="My account" title="My account">
+              <UserRound className="size-5" />
+            </Link>
             <button
               type="button"
               onClick={() => cart.open()}
-              className="relative flex h-11 items-center gap-2 rounded-full bg-ink pl-3.5 pr-4 text-white transition hover:bg-ink-2"
+              className="relative flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink pl-3 pr-3.5 text-white transition hover:bg-ink-2"
               aria-label={`Open cart, ${count} item${count === 1 ? "" : "s"}`}
             >
               <ShoppingBag className="size-5" />
@@ -166,16 +169,17 @@ export function Header({ categories }: { categories: Cat[] }) {
             <nav aria-label="Mobile" className="flex flex-1 flex-col px-5 pb-8" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenu(false); }}>
               {[{ href: "/shop", label: "Shop all", bn: "সব পণ্য" }, ...categories.map((c) => ({ href: `/shop?category=${c.slug}`, label: c.name, bn: c.name_bn ?? "" }))].map((l, i) => (
                 <m.div key={l.href} initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.04 * i, duration: 0.3 }}>
-                  <Link href={l.href} className="flex items-baseline justify-between border-b border-white/10 py-4">
-                    <span className="display text-[2.1rem]">{l.label}</span>
-                    <span className="bn text-sm text-white/50" lang="bn">{l.bn}</span>
+                  <Link href={l.href} className="flex min-h-14 items-center justify-between gap-3 border-b border-white/10 py-3">
+                    <span className="min-w-0 text-lg font-semibold">{l.label}</span>
+                    <span className="bn shrink-0 text-sm text-white/50" lang="bn">{l.bn}</span>
                   </Link>
                 </m.div>
               ))}
-              <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                 <Link href="/order" className="rounded-2xl bg-white/10 p-4 font-semibold">Track my order</Link>
                 <Link href="/help" className="rounded-2xl bg-white/10 p-4 font-semibold">Help & policies</Link>
                 <Link href="/wishlist" className="rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist</Link>
+                <Link href="/account" className="rounded-2xl bg-electric p-4 font-semibold">My account</Link>
               </div>
               <Streaks tone="light" className="mt-10 h-8 w-16 opacity-60" />
             </nav>
