@@ -1,3 +1,4 @@
+import { SOCIALS } from "@/lib/social";
 import Link from "next/link";
 import clsx from "clsx";
 import { AlertTriangle } from "lucide-react";
@@ -89,7 +90,7 @@ function StoreForm({ v }: { v: StoreSettings }) {
         <Field label="Tagline (Bangla)" name="tagline_bn" defaultValue={v.tagline_bn} />
         <Field label="Address" name="address" defaultValue={v.address} required />
         <Field label="Support hours" name="hours" defaultValue={v.hours} />
-        {(["facebook", "instagram", "tiktok", "youtube"] as const).map((k) => <Field key={k} label={`${k[0].toUpperCase()}${k.slice(1)} URL`} name={k} type="url" defaultValue={v.social?.[k] ?? ""} />)}
+        {SOCIALS.map((x) => <Field key={x.key} label={`${x.label} link`} name={x.key} type="url" placeholder="https://" defaultValue={v.social?.[x.key] ?? ""} />)}
       </div>
     </Form>
   );

@@ -35,12 +35,23 @@ Set these for the **Production** environment of the host (copy `.env.example` fo
 | `APP_SECRET` | yes | 32+ random characters (`openssl rand -hex 32`). The app throws without it in production |
 | `CRON_SECRET` | yes | protects `/api/cron/cleanup` |
 | `SMS_PROVIDER` + gateway keys | for customer login | `bulksmsbd` (`BULKSMSBD_API_KEY`, `BULKSMSBD_SENDER_ID`) or `sslwireless` (`SSL_SMS_API_TOKEN`, `SSL_SMS_SID`). Without it, customers cannot log in (ordering still works) |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | yes, for product photos | Cloudinary → Dashboard → API Keys. Without them the admin cannot upload product images (see section 2a) |
 | `GEMINI_API_KEY` | optional | AI chat replies |
 | `META_PIXEL_ID`, `TIKTOK_PIXEL_ID` | optional | read at **build** time |
 | `STEADFAST_*`, `PATHAO_*`, `REDX_*` | per courier | see README → Couriers |
 
 **`NEXT_PUBLIC_*` values and pixel IDs are baked in at build time — set them before `npm run build`, and rebuild if you change them.**
 Leave `ALLOW_DEV_SMS` and `ALLOW_SANDBOX_COURIER` unset in production.
+
+### 2a. Product photos (Cloudinary)
+
+Product photos are uploaded from the admin straight to **Cloudinary**; the database stores only the image link.
+
+1. Create a free account at cloudinary.com and copy the *Cloud name*, *API Key* and *API Secret* from the Dashboard.
+2. Put the three `CLOUDINARY_*` variables in the host's Production environment (Vercel → Settings → Environment Variables) and redeploy. They are server-side only and are not baked into the build.
+3. Photos land in the folder `shopnearbd/products`. Each is limited to 10 MB and is resized to at most 1600×2000 by Cloudinary.
+4. Removing an image in the product editor, or deleting a product, also deletes the file from Cloudinary.
+5. Products uploaded before this change keep working: their old Supabase Storage links still load.
 
 ## 3. Build and run
 
@@ -86,17 +97,19 @@ The admin shows a banner until each section has been saved.
 
 - Store name, phone, email, address, hours, **WhatsApp number** (the "Order on WhatsApp" button on product pages and the "Confirm on WhatsApp" button on orders stay hidden until a valid Bangladeshi number is saved).
 - Delivery zones and fees, bKash/Nagad merchant numbers, return/refund/warranty policies.
-- Categories and products with real photos.
+- Categories and products with real photos (needs the Cloudinary variables above). Products can be deleted from Admin → Products (button on each row and on the edit page).
+- **Social links**: Admin → Settings → Store has a link field for Facebook, Instagram, TikTok, YouTube, Messenger, Telegram, X, LinkedIn and Pinterest. Every link you fill in appears as an icon under "Follow us" in the footer; empty ones are hidden. The WhatsApp icon uses the WhatsApp number from the same form.
 - Couriers: add credentials, register the webhook URLs shown in Admin → Couriers, book one real test parcel per courier. The courier adapters have not been exercised against live APIs yet.
 - Ads tracking (pixel IDs and server tokens) if you run ads.
 
 ## 7. Smoke test after every deploy
 
 1. Home, a category, a product page and `/shop` load (not 404).
-2. Add a product to the bag, check out with Cash on Delivery, reach the thank-you page.
-3. `/admin/login` works; Dashboard, Orders (open one — the Customer check card should show), Customers, Inventory and Analytics load without an error screen.
-4. The new order appears in Admin → Orders; confirm it, and try "Confirm on WhatsApp".
-5. Optional, from a checkout of the repo: `npm run typecheck && npm run lint && npm test`.
+2. Admin → Products → New product: upload a photo (it should appear within seconds), save, and see it in the shop. Delete a test product to check the delete button.
+3. Add a product to the bag, check out with Cash on Delivery, reach the thank-you page.
+4. `/admin/login` works; Dashboard, Orders (open one — the Customer check card should show), Customers, Inventory and Analytics load without an error screen.
+5. The new order appears in Admin → Orders; confirm it, and try "Confirm on WhatsApp".
+6. Optional, from a checkout of the repo: `npm run typecheck && npm run lint && npm test`.
 
 ## Performance notes
 

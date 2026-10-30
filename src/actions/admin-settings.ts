@@ -7,6 +7,7 @@ import type { ActionState } from "@/components/admin/form";
 
 const bdNumber = z.string().trim().regex(/^(01[3-9]\d{8}|01X{9})$/, "Enter an 11-digit mobile number");
 const on = (v: FormDataEntryValue | null) => v === "on";
+import { SOCIALS } from "@/lib/social";
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 function build(key: string, f: FormData): { value?: unknown; error?: string; isPublic: boolean } {
@@ -15,8 +16,8 @@ function build(key: string, f: FormData): { value?: unknown; error?: string; isP
       const r = z.object({
         name: z.string().min(2).max(60), tagline: z.string().max(140), tagline_bn: z.string().max(140), phone: z.string().min(5).max(30),
         whatsapp: z.string().max(30), email: z.string().email(), address: z.string().min(3).max(200), hours: z.string().max(80),
-        social: z.object({ facebook: z.string().url().or(z.literal("")), instagram: z.string().url().or(z.literal("")), tiktok: z.string().url().or(z.literal("")), youtube: z.string().url().or(z.literal("")) }),
-      }).safeParse({ name: str(f, "name"), tagline: str(f, "tagline"), tagline_bn: str(f, "tagline_bn"), phone: str(f, "phone"), whatsapp: str(f, "whatsapp"), email: str(f, "email"), address: str(f, "address"), hours: str(f, "hours"), social: { facebook: str(f, "facebook"), instagram: str(f, "instagram"), tiktok: str(f, "tiktok"), youtube: str(f, "youtube") } });
+        social: z.object(Object.fromEntries(SOCIALS.map((x) => [x.key, z.string().url().or(z.literal(""))]))),
+      }).safeParse({ name: str(f, "name"), tagline: str(f, "tagline"), tagline_bn: str(f, "tagline_bn"), phone: str(f, "phone"), whatsapp: str(f, "whatsapp"), email: str(f, "email"), address: str(f, "address"), hours: str(f, "hours"), social: Object.fromEntries(SOCIALS.map((x) => [x.key, str(f, x.key)])) });
       return r.success ? { value: { ...r.data, dev_default: false }, isPublic: true } : { error: `${r.error.issues[0].path.join(".")}: ${r.error.issues[0].message}`, isPublic: true };
     }
     case "shipping": {

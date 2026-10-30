@@ -104,7 +104,7 @@ async function ProductView({ params }: Params) {
         <ProductExperience product={product} shipping={settings.shipping} payments={settings.payments} whatsapp={settings.store.whatsapp}>
           <div className="mt-8 divide-y divide-line rounded-[1.5rem] bg-white shadow-[var(--shadow-card)]">
             <Details title="Description" open>
-              <p className="whitespace-pre-line leading-relaxed text-ink-2">{product.description}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink-2">{product.description}</p>
             </Details>
             {product.specifications.length > 0 && (
               <Details title="Specifications" open>

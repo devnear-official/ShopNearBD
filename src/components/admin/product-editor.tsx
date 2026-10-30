@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister } from "react-hook-form";
 import { ArrowDown, ArrowUp, Eye, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import clsx from "clsx";
-import { saveProduct, uploadProductImage } from "@/actions/admin-products";
+import { getImageUploadSignature, saveProduct } from "@/actions/admin-products";
 import { buttonClass } from "@/components/ui/button";
 import { toast } from "./form";
 
@@ -61,19 +61,36 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
     });
   });
 
+  /** Photos go from the browser straight to Cloudinary; only the returned link is saved with the product. */
+  const uploadOne = async (f: File): Promise<{ url: string; width: number; height: number }> => {
+    if (!/^image\/(jpeg|png|webp|avif)$/.test(f.type)) throw new Error(`${f.name}: use JPG, PNG, WebP or AVIF.`);
+    if (f.size > 10 * 1024 * 1024) throw new Error(`${f.name}: larger than 10 MB.`);
+    const sig = await getImageUploadSignature();
+    if (!sig.ok) throw new Error(sig.error);
+    const { cloudName, apiKey, signature, timestamp, folder, transformation } = sig.params;
+    const fd = new FormData();
+    fd.set("file", f);
+    fd.set("api_key", apiKey);
+    fd.set("timestamp", String(timestamp));
+    fd.set("signature", signature);
+    fd.set("folder", folder);
+    fd.set("transformation", transformation);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd, signal: AbortSignal.timeout(90_000) });
+    const json = (await res.json().catch(() => null)) as { secure_url?: string; width?: number; height?: number; error?: { message?: string } } | null;
+    if (!res.ok || !json?.secure_url) throw new Error(`${f.name}: ${json?.error?.message ?? "upload failed."}`);
+    return { url: json.secure_url, width: json.width ?? 0, height: json.height ?? 0 };
+  };
+
   const onFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     const list = Array.from(files).slice(0, 20 - images.fields.length);
     setUploading(list.length);
     for (const f of list) {
-      const fd = new FormData();
-      fd.set("file", f);
       try {
-        const r = await uploadProductImage(fd);
-        if (r.ok) images.append({ url: r.url, storage_path: r.path, alt: getValues("name"), variant_key: null, width: r.width, height: r.height });
-        else toast(r.error, "error");
-      } catch {
-        toast(`${f.name}: upload failed. Please try again.`, "error");
+        const r = await uploadOne(f);
+        images.append({ url: r.url, storage_path: null, alt: getValues("name"), variant_key: null, width: r.width || null, height: r.height || null });
+      } catch (e) {
+        toast(e instanceof Error ? e.message : `${f.name}: upload failed. Please try again.`, "error");
       } finally {
         setUploading((n) => n - 1);
       }
@@ -94,7 +111,7 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
           </div>
         </Section>
 
-        <Section title="Images" hint="First image is the main one. Max 20, resized to 1600px WebP.">
+        <Section title="Images" hint="First image is the main one. Max 20, up to 10 MB each. Stored on Cloudinary.">
           {errors.images && <p className="field-error mb-2">{errors.images}</p>}
           <ul className="grid gap-3 sm:grid-cols-2">
             {images.fields.map((f, i) => (

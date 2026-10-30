@@ -4,15 +4,17 @@ import type { Category, PublicSettings } from "@/lib/catalog";
 import { Logo } from "@/components/ui/logo";
 import { Streaks, Swoosh } from "@/components/ui/streaks";
 import { Year } from "@/components/ui/year";
+import { SocialIcon } from "@/components/ui/social-icon";
+import { SOCIALS } from "@/lib/social";
+import { waLink } from "@/lib/whatsapp";
 
 export function Footer({ settings, categories }: { settings: PublicSettings; categories: Category[] }) {
   const s = settings.store;
+  const wa = waLink(s.whatsapp, "Hi ShopNear BD!");
   const socials = [
-    { key: "facebook", label: "Facebook" },
-    { key: "instagram", label: "Instagram" },
-    { key: "tiktok", label: "TikTok" },
-    { key: "youtube", label: "YouTube" },
-  ].filter((x) => s.social?.[x.key]);
+    ...(wa ? [{ key: "whatsapp" as const, label: "WhatsApp", href: wa, color: "#1fae54" }] : []),
+    ...SOCIALS.filter((x) => s.social?.[x.key]).map((x) => ({ key: x.key, label: x.label, href: s.social[x.key], color: x.color })),
+  ];
   return (
     <footer className="relative mt-24 overflow-hidden bg-ink text-white">
       <Swoosh className="pointer-events-none absolute -top-px left-0 h-10 w-full rotate-180 opacity-90" />
@@ -44,15 +46,20 @@ export function Footer({ settings, categories }: { settings: PublicSettings; cat
             <p className="flex items-start gap-2 text-white/75"><Mail className="mt-0.5 size-4 shrink-0" /> {s.email}</p>
             <p className="flex items-start gap-2 text-white/75"><MapPin className="mt-0.5 size-4 shrink-0" /> {s.address}</p>
             <p className="text-white/50">{s.hours}</p>
-            {socials.length > 0 && (
-              <div className="flex gap-2 pt-2">
-                {socials.map(({ key, label }) => (
-                  <a key={key} href={s.social[key]} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20">{label}</a>
-                ))}
-              </div>
-            )}
           </FooterCol>
         </div>
+
+        {socials.length > 0 && (
+          <div className="mt-12 flex flex-wrap items-center gap-3 border-t border-white/10 pt-8">
+            <span className="eyebrow mr-2 text-white/45">Follow us</span>
+            {socials.map(({ key, label, href, color }) => (
+              <a key={key} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
+                className="grid size-11 place-items-center rounded-full bg-white/10 text-white transition duration-200 hover:-translate-y-1 hover:bg-[var(--c)] hover:shadow-[0_10px_20px_-8px_var(--c)]" style={{ "--c": color } as React.CSSProperties}>
+                <SocialIcon name={key} className="size-5" />
+              </a>
+            ))}
+          </div>
+        )}
 
         <div aria-hidden className="display pointer-events-none mt-16 select-none whitespace-nowrap text-[18vw] leading-none text-white/[0.04] lg:text-[13rem]">shop near.</div>
 

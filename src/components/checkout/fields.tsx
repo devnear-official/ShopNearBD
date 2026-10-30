@@ -57,7 +57,7 @@ export function ManualPayment(props: {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   return (
-    <div className="mt-6 rounded-[1.5rem] bg-paper p-5">
+    <div className="mt-6 rounded-[1.5rem] bg-white p-5 ring-1 ring-line">
       <p className="flex items-start gap-2 rounded-xl bg-sun/20 p-3 text-sm font-medium text-[#7a4d05]">
         <ShieldAlert className="mt-0.5 size-4 shrink-0" /> We will never ask for your {label} PIN or OTP. Never share them with anyone, including us.
       </p>

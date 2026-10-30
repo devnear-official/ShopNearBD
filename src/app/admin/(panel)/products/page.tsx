@@ -7,6 +7,7 @@ import { Badge, Card, Empty, PageHeader, Pager, Table } from "@/components/admin
 import { ActionForm, SubmitButton } from "@/components/admin/form";
 import { setProductStatus } from "@/actions/admin-products";
 import { buttonClass } from "@/components/ui/button";
+import { DeleteProductButton } from "@/components/admin/delete-product";
 
 type Row = { id: string; slug: string; name: string; sku: string; status: string; is_featured: boolean; price: number; sale_price: number | null; image: string | null; category: string | null; stock: number; low: number; variants: number; updated_at: Date };
 const TONE = { draft: "amber", published: "green", archived: "gray" } as const;
@@ -38,32 +39,66 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       <PageHeader title="Products" description={`${total} product${total === 1 ? "" : "s"}`} actions={<Link href="/admin/products/new" className={buttonClass("primary", "sm")}><Plus className="size-4" /> New product</Link>} />
       <Card className="mb-4">
         <form className="flex flex-wrap gap-2" role="search">
-          <input name="q" defaultValue={q} placeholder="Name or SKU" className="input max-w-xs" aria-label="Search products" />
-          <select name="status" defaultValue={status ?? ""} className="input max-w-[12rem]" aria-label="Status"><option value="">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select>
+          <input name="q" defaultValue={q} placeholder="Name or SKU" className="input min-w-0 flex-1 sm:max-w-xs" aria-label="Search products" />
+          <select name="status" defaultValue={status ?? ""} className="input w-auto max-w-[12rem]" aria-label="Status"><option value="">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select>
           <button className={buttonClass("dark", "sm")}>Filter</button>
         </form>
       </Card>
       {!rows.length ? <Empty>No products found. <Link href="/admin/products/new" className="font-semibold text-electric underline">Create one</Link>.</Empty> : (
-        <Card pad={false}>
-          <Table head={["", "Product", "Price", "Stock", "Status", ""]}>
+        <>
+          {/* Phones: one card per product */}
+          <ul className="space-y-3 md:hidden">
             {rows.map((p) => (
-              <tr key={p.id} className="hover:bg-paper">
-                <td className="w-16 px-4 py-2"><span className="relative block size-12 overflow-hidden rounded-xl bg-cloud">{p.image && <Image src={p.image} alt="" fill sizes="48px" className="object-cover" />}</span></td>
-                <td className="px-4 py-2"><Link href={`/admin/products/${p.id}`} className="font-semibold hover:underline">{p.name}</Link>{p.is_featured && <Badge tone="violet" className="ml-2">Featured</Badge>}<span className="block text-xs text-slate"><span className="font-mono">{p.sku}</span> · {p.category ?? "No category"} · {p.variants} variant{p.variants === 1 ? "" : "s"}</span></td>
-                <td className="px-4 py-2 tabular-nums">{formatTaka(p.sale_price ?? p.price)}{p.sale_price && <s className="ml-1 text-xs text-mist">{formatTaka(p.price)}</s>}</td>
-                <td className="px-4 py-2"><span className="tabular-nums">{p.stock}</span>{p.low > 0 && <Badge tone={p.stock === 0 ? "red" : "amber"} className="ml-2">{p.low} low</Badge>}</td>
-                <td className="px-4 py-2"><Badge tone={TONE[p.status as keyof typeof TONE]}>{p.status}</Badge></td>
-                <td className="px-4 py-2 text-right">
+              <li key={p.id} className="rounded-3xl bg-white p-3.5 shadow-[var(--shadow-card)]">
+                <div className="flex gap-3">
+                  <Link href={`/admin/products/${p.id}`} className="relative size-20 shrink-0 overflow-hidden rounded-2xl bg-cloud">{p.image && <Image src={p.image} alt="" fill sizes="80px" className="object-cover" />}</Link>
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/admin/products/${p.id}`} className="line-clamp-2 font-semibold leading-snug">{p.name}</Link>
+                    <p className="mt-0.5 truncate text-xs text-slate"><span className="font-mono">{p.sku}</span> · {p.category ?? "No category"}</p>
+                    <p className="mt-1.5 font-display font-bold tabular-nums">{formatTaka(p.sale_price ?? p.price)}{p.sale_price && <s className="ml-1.5 text-xs font-normal text-mist">{formatTaka(p.price)}</s>}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <Badge tone={TONE[p.status as keyof typeof TONE]}>{p.status}</Badge>
+                  {p.is_featured && <Badge tone="violet">Featured</Badge>}
+                  <Badge tone={p.stock === 0 ? "red" : p.low > 0 ? "amber" : "gray"}>{p.stock} in stock</Badge>
+                </div>
+                <div className="mt-3 flex items-center gap-1 border-t border-line pt-2.5">
+                  <Link href={`/admin/products/${p.id}`} className="inline-flex h-9 items-center rounded-full bg-paper px-4 text-sm font-semibold">Edit</Link>
                   <ActionForm action={setProductStatus} className="inline">
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="status" value={p.status === "published" ? "draft" : "published"} />
                     <SubmitButton size="sm" variant="ghost">{p.status === "published" ? "Unpublish" : "Publish"}</SubmitButton>
                   </ActionForm>
-                </td>
-              </tr>
+                  <DeleteProductButton id={p.id} name={p.name} className="ml-auto" />
+                </div>
+              </li>
             ))}
-          </Table>
-        </Card>
+          </ul>
+
+          {/* Tablets and up: table */}
+          <Card pad={false} className="hidden md:block">
+            <Table head={["", "Product", "Price", "Stock", "Status", ""]}>
+              {rows.map((p) => (
+                <tr key={p.id} className="hover:bg-paper">
+                  <td className="w-16 px-4 py-2"><span className="relative block size-12 overflow-hidden rounded-xl bg-cloud">{p.image && <Image src={p.image} alt="" fill sizes="48px" className="object-cover" />}</span></td>
+                  <td className="px-4 py-2"><Link href={`/admin/products/${p.id}`} className="font-semibold hover:underline">{p.name}</Link>{p.is_featured && <Badge tone="violet" className="ml-2">Featured</Badge>}<span className="block text-xs text-slate"><span className="font-mono">{p.sku}</span> · {p.category ?? "No category"} · {p.variants} variant{p.variants === 1 ? "" : "s"}</span></td>
+                  <td className="px-4 py-2 tabular-nums">{formatTaka(p.sale_price ?? p.price)}{p.sale_price && <s className="ml-1 text-xs text-mist">{formatTaka(p.price)}</s>}</td>
+                  <td className="px-4 py-2"><span className="tabular-nums">{p.stock}</span>{p.low > 0 && <Badge tone={p.stock === 0 ? "red" : "amber"} className="ml-2">{p.low} low</Badge>}</td>
+                  <td className="px-4 py-2"><Badge tone={TONE[p.status as keyof typeof TONE]}>{p.status}</Badge></td>
+                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                    <ActionForm action={setProductStatus} className="inline">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="status" value={p.status === "published" ? "draft" : "published"} />
+                      <SubmitButton size="sm" variant="ghost">{p.status === "published" ? "Unpublish" : "Publish"}</SubmitButton>
+                    </ActionForm>
+                    <DeleteProductButton id={p.id} name={p.name} />
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </Card>
+        </>
       )}
       <Pager page={page} pages={Math.ceil(total / size)} href={(p) => `/admin/products?${qs({ page: String(p) })}`} />
     </>
