@@ -68,10 +68,15 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
     for (const f of list) {
       const fd = new FormData();
       fd.set("file", f);
-      const r = await uploadProductImage(fd);
-      if (r.ok) images.append({ url: r.url, storage_path: r.path, alt: getValues("name"), variant_key: null, width: r.width, height: r.height });
-      else toast(r.error, "error");
-      setUploading((n) => n - 1);
+      try {
+        const r = await uploadProductImage(fd);
+        if (r.ok) images.append({ url: r.url, storage_path: r.path, alt: getValues("name"), variant_key: null, width: r.width, height: r.height });
+        else toast(r.error, "error");
+      } catch {
+        toast(`${f.name}: upload failed. Please try again.`, "error");
+      } finally {
+        setUploading((n) => n - 1);
+      }
     }
   };
 

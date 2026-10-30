@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   poweredByHeader: false,
   serverExternalPackages: ["postgres"],
+  // Admin product photos go through a server action; the 1 MB default rejects most phone photos.
+  experimental: { serverActions: { bodySizeLimit: "10mb" } },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [70, 80],
