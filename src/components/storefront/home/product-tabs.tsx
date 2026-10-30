@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import clsx from "clsx";
 import type { ProductCard as P } from "@/lib/catalog";
 import { ProductCard } from "@/components/products/product-card";

@@ -1,8 +1,8 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/intent-link";
 import { useState } from "react";
-import { m } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import type { Category } from "@/lib/catalog";
@@ -22,7 +22,7 @@ export function CategoryLanes({ categories }: { categories: Category[] }) {
           return (
             <m.div key={c.slug} layout className={clsx("relative overflow-hidden rounded-[2rem]", open ? "flex-[3.2]" : "flex-1")}
               transition={{ type: "spring", stiffness: 180, damping: 26 }} onMouseEnter={() => setActive(i)}>
-              <Link href={`/shop?category=${c.slug}`} onFocus={() => setActive(i)} className="group absolute inset-0 flex flex-col justify-between p-6 text-white" style={{ background: c.accent ?? "#1E6BFF" }}>
+              <IntentLink href={`/shop?category=${c.slug}`} onFocus={() => setActive(i)} className="group absolute inset-0 flex flex-col justify-between p-6 text-white" style={{ background: c.accent ?? "#1E6BFF" }}>
                 {c.cover && (
                   <Image src={c.cover} alt="" fill sizes="40vw" className={clsx("object-cover transition-all duration-700", open ? "opacity-100 scale-100" : "opacity-0 scale-110")} />
                 )}
@@ -42,7 +42,7 @@ export function CategoryLanes({ categories }: { categories: Category[] }) {
                     </m.span>
                   )}
                 </span>
-              </Link>
+              </IntentLink>
             </m.div>
           );
         })}
@@ -50,7 +50,7 @@ export function CategoryLanes({ categories }: { categories: Category[] }) {
 
       <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 lg:hidden">
         {categories.map((c, i) => (
-          <Link key={c.slug} href={`/shop?category=${c.slug}`} className="relative flex aspect-[3/4] w-[68%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[1.75rem] p-5 text-white sm:w-[40%]" style={{ background: c.accent ?? "#1E6BFF" }}>
+          <IntentLink key={c.slug} href={`/shop?category=${c.slug}`} className="relative flex aspect-[3/4] w-[68%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[1.75rem] p-5 text-white sm:w-[40%]" style={{ background: c.accent ?? "#1E6BFF" }}>
             {c.cover && <Image src={c.cover} alt="" fill sizes="70vw" className="object-cover" />}
             <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10" />
             <span className="relative font-display text-3xl font-bold">{String(i + 1).padStart(2, "0")}</span>
@@ -59,7 +59,7 @@ export function CategoryLanes({ categories }: { categories: Category[] }) {
               {c.name_bn && <span className="bn mt-1 block font-semibold text-white/85" lang="bn">{c.name_bn}</span>}
               <span className="mt-2 block text-sm text-white/80">{c.product_count} products →</span>
             </span>
-          </Link>
+          </IntentLink>
         ))}
       </div>
     </>

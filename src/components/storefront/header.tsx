@@ -1,14 +1,18 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AnimatePresence, m } from "motion/react";
-import { ArrowUpRight, Heart, Menu, PackageSearch, Search, ShoppingBag, UserRound, X } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
+import { ArrowUpRight, Heart, Menu, PackageSearch, Search, ShoppingCart, UserRound, X } from "lucide-react";
 import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";
 import { Streaks } from "@/components/ui/streaks";
 import { cart, cartCount, useCart } from "@/components/cart/cart-store";
 import { useDialog } from "@/hooks/use-dialog";
-import { SearchOverlay } from "./search-overlay";
+import dynamic from "next/dynamic";
+
+// Search (with voice and photo search) loads when first opened, or when the browser is idle.
+const SearchOverlay = dynamic(() => import("./search-overlay").then((m) => m.SearchOverlay), { ssr: false });
 
 type Cat = { slug: string; name: string; name_bn: string | null; accent: string | null };
 
@@ -20,6 +24,20 @@ export function Header({ categories }: { categories: Cat[] }) {
   const [search, setSearch] = useState(false);
   const [searchMode, setSearchMode] = useState<"text" | "voice" | "image">("text");
   const [searchFile, setSearchFile] = useState<File | null>(null);
+  const [searchLoaded, setSearchLoaded] = useState(false);
+  // The cart button bumps when a product lands in it (see lib/fly-to-cart).
+  const [bump, setBump] = useState(false);
+  useEffect(() => {
+    const on = () => { setBump(false); requestAnimationFrame(() => setBump(true)); };
+    window.addEventListener("sn:cart-bump", on);
+    return () => window.removeEventListener("sn:cart-bump", on);
+  }, []);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    const t = w.requestIdleCallback ? w.requestIdleCallback(() => void import("./search-overlay"), { timeout: 6000 }) : window.setTimeout(() => void import("./search-overlay"), 4000);
+    return () => { if (!w.requestIdleCallback) clearTimeout(t); };
+  }, []);
+  if (search && !searchLoaded) setSearchLoaded(true);
   const [catsOpen, setCatsOpen] = useState(false);
 
   useEffect(() => {
@@ -126,10 +144,12 @@ export function Header({ categories }: { categories: Cat[] }) {
             <button
               type="button"
               onClick={() => cart.open()}
-              className="relative flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink pl-3 pr-3.5 text-white transition hover:bg-ink-2"
+              data-cart-target
+              onAnimationEnd={() => setBump(false)}
+              className={clsx("relative flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink pl-3 pr-3.5 text-white transition hover:bg-ink-2", bump && "cart-bump")}
               aria-label={`Open cart, ${count} item${count === 1 ? "" : "s"}`}
             >
-              <ShoppingBag className="size-5" />
+              <ShoppingCart className="size-5" />
               <span className="text-sm font-semibold tabular-nums">{count}</span>
               <AnimatePresence>
                 {state.lastAdded && count > 0 && (
@@ -187,7 +207,7 @@ export function Header({ categories }: { categories: Cat[] }) {
         )}
       </AnimatePresence>
 
-      <SearchOverlay open={search} mode={searchMode} file={searchFile} onClose={() => { setSearch(false); setSearchMode("text"); setSearchFile(null); }} />
+      {searchLoaded && <SearchOverlay open={search} mode={searchMode} file={searchFile} onClose={() => { setSearch(false); setSearchMode("text"); setSearchFile(null); }} />}
     </>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import { AnimatePresence, m } from "motion/react";
-import { Check, Plus, Loader2 } from "lucide-react";
+import { IntentLink } from "@/components/ui/intent-link";
+import { useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
+import { Check, ShoppingCart } from "lucide-react";
 import clsx from "clsx";
 import type { ProductCard as Product, Variant } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
@@ -11,6 +12,7 @@ import { formatTaka, percentOff } from "@/lib/format";
 import { swatch, isLight } from "@/lib/colors";
 import { cart } from "@/components/cart/cart-store";
 import { WishlistButton } from "./wishlist";
+import { flyToCart } from "@/lib/fly-to-cart";
 
 /**
  * The "tag card": a product card cut like a shopping tag (punched eyelet,
@@ -21,7 +23,8 @@ export function ProductCard({ product, priority, className, tone = "light", larg
   const sizes = large ? "(min-width:1280px) 46vw, (min-width:768px) 30vw, 46vw" : "(min-width:1280px) 22vw, (min-width:768px) 30vw, 46vw";
   const initial = useMemo(() => product.variants.find((v) => v.stock > 0) ?? product.variants[0], [product.variants]);
   const [variant, setVariant] = useState<Variant | undefined>(initial);
-  const [status, setStatus] = useState<"idle" | "adding" | "added">("idle");
+  const [status, setStatus] = useState<"idle" | "added">("idle");
+  const photo = useRef<HTMLDivElement>(null);
 
   const price = variant ? unitPrice(product, variant) : product.min_price;
   const was = variant ? compareAtPrice(product, variant) : null;
@@ -38,21 +41,21 @@ export function ProductCard({ product, priority, className, tone = "light", larg
 
   const add = () => {
     if (!variant || variant.stock <= 0) return;
-    setStatus("adding");
+    flyToCart(photo.current, img?.url);
     cart.add({
       variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name,
       image: img?.url ?? null, unitPrice: price, maxStock: variant.stock,
     });
-    // brief confirmation; the header badge also pulses
-    setTimeout(() => setStatus("added"), 220);
+    // The photo flies into the header cart; the button confirms with a tick.
+    setStatus("added");
     setTimeout(() => setStatus("idle"), 1600);
   };
 
   return (
     <article className={clsx("group/card relative flex flex-col", className)}>
       <div className="relative">
-      <Link href={href} className="relative block" aria-label={`${product.name}, ${formatTaka(price)}`}>
-        <div className="tag-hole relative aspect-[4/5] overflow-hidden rounded-[var(--radius-tag)] bg-cloud shadow-[var(--shadow-card)] transition-[transform,box-shadow] duration-500 ease-[var(--ease-snap)] group-hover/card:-translate-y-1 group-hover/card:shadow-[var(--shadow-float)]">
+      <IntentLink href={href} className="relative block" aria-label={`${product.name}, ${formatTaka(price)}`}>
+        <div ref={photo} className="tag-hole relative aspect-[4/5] overflow-hidden rounded-[var(--radius-tag)] bg-cloud shadow-[var(--shadow-card)] transition-[transform,box-shadow] duration-500 ease-[var(--ease-snap)] group-hover/card:-translate-y-1 group-hover/card:shadow-[var(--shadow-float)]">
           {img && (
             <Image src={img.url} alt={img.alt || product.name} fill priority={priority} sizes={sizes}
               className="object-cover transition-transform duration-700 ease-[var(--ease-soft)] group-hover/card:scale-[1.04]" />
@@ -82,14 +85,14 @@ export function ProductCard({ product, priority, className, tone = "light", larg
             ) : <span />}
           </div>
         </div>
-      </Link>
+      </IntentLink>
 
       <WishlistButton slug={product.slug} name={product.name} className="absolute right-2.5 top-2.5 z-10" />
       {/* Quick add sits outside the link so it never triggers navigation. */}
       <button
         type="button"
         onClick={add}
-        disabled={!variant || variant.stock <= 0 || status === "adding"}
+        disabled={!variant || variant.stock <= 0}
         aria-label={variant && variant.stock > 0 ? `Add ${product.name}${variant.name !== "Default" ? ` (${variant.name})` : ""} to cart` : `${product.name} is sold out`}
         className={clsx(
           "absolute bottom-3 right-3 z-10 grid size-12 place-items-center rounded-full shadow-lg transition-all duration-300",
@@ -99,12 +102,10 @@ export function ProductCard({ product, priority, className, tone = "light", larg
         data-card-add
       >
         <AnimatePresence mode="wait" initial={false}>
-          {status === "adding" ? (
-            <m.span key="l" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Loader2 className="size-5 animate-spin" /></m.span>
-          ) : status === "added" ? (
+          {status === "added" ? (
             <m.span key="c" initial={{ scale: 0.4 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}><Check className="size-5" /></m.span>
           ) : (
-            <m.span key="p" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ opacity: 0 }}><Plus className="size-5" /></m.span>
+            <m.span key="p" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}><ShoppingCart className="size-5" /></m.span>
           )}
         </AnimatePresence>
       </button>
@@ -115,7 +116,7 @@ export function ProductCard({ product, priority, className, tone = "light", larg
           <div className="min-w-0">
             {product.category && <p className={clsx("eyebrow mb-1", dark ? "text-white/45" : "text-mist")}>{product.category.name}</p>}
             <h3 className={clsx("line-clamp-2 font-semibold leading-snug", dark ? "text-white" : "text-ink")}>
-              <Link href={href} className="hover:underline hover:decoration-electric hover:decoration-2 hover:underline-offset-4">{product.name}</Link>
+              <IntentLink href={href} className="hover:underline hover:decoration-electric hover:decoration-2 hover:underline-offset-4">{product.name}</IntentLink>
             </h3>
           </div>
           <div className="shrink-0 text-right">

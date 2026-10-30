@@ -37,6 +37,7 @@ test("product page single checkout: Buy now → order form on the same page → 
 
 test("product page order form validates before placing", async ({ page }) => {
   await visit(page, "/shop/steel-water-bottle-750");
+  await page.getByRole("button", { name: /Buy now/ }).first().click();
   const form = page.locator("#order-now");
   await form.getByLabel(/Mobile number/).fill("12345");
   await form.getByRole("button", { name: /Confirm order/ }).click();

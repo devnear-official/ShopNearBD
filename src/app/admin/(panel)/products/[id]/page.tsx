@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/auth";
@@ -5,7 +7,15 @@ import { categoryOptions, loadProductForAdmin, toEditorValues } from "@/lib/admi
 import { PageHeader } from "@/components/admin/ui";
 import { ProductEditor } from "@/components/admin/product-editor";
 
-export default async function EditProduct({ params }: { params: Promise<{ id: string }> }) {
+export default function EditProduct({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<AdminPageFallback />}>
+      <EditProductContent params={params} />
+    </Suspense>
+  );
+}
+
+async function EditProductContent({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminPage();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
