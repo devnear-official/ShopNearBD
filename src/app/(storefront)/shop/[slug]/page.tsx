@@ -15,7 +15,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
-  return slugs.slice(0, 200).map((s) => ({ slug: s.slug }));
+  const params = slugs.slice(0, 200).map((s) => ({ slug: s.slug }));
+  return params.length ? params : [{ slug: "__build_placeholder__" }];
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

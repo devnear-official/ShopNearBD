@@ -9,7 +9,8 @@ import { ButtonLink } from "@/components/ui/button";
 /** Crawlable, statically generated category landing pages. Filtering lives on /shop. */
 export async function generateStaticParams() {
   const cats = await getCategories();
-  return cats.map((c) => ({ slug: c.slug }));
+  const params = cats.map((c) => ({ slug: c.slug }));
+  return params.length ? params : [{ slug: "__build_placeholder__" }];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
