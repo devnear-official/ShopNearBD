@@ -39,16 +39,15 @@ export type Claims = { sub: string; email?: string | null; role: "authenticated"
 
 export async function asAnon<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   return client().begin(async (tx) => {
-    await tx.unsafe("set local role anon");
-    await tx`select set_config('request.jwt.claims', '{"role":"anon"}', true)`;
+    await tx`select set_config('role', 'anon', true), set_config('request.jwt.claims', '{"role":"anon"}', true)`;
     return fn(tx as Tx);
   }) as Promise<T>;
 }
 
 export async function asUser<T>(claims: Claims, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return client().begin(async (tx) => {
-    await tx.unsafe("set local role authenticated");
-    await tx`select set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`;
+    // role + claims in one statement: one round trip instead of two
+    await tx`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`;
     return fn(tx as Tx);
   }) as Promise<T>;
 }

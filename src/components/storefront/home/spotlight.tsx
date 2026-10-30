@@ -1,14 +1,16 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/intent-link";
 import { useState } from "react";
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { ArrowRight, Check, ShoppingBag, Truck } from "lucide-react";
 import type { ProductCard } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
 import { swatch } from "@/lib/colors";
 import { Price } from "@/components/ui/price";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { flyToCart } from "@/lib/fly-to-cart";
 import { cart } from "@/components/cart/cart-store";
 
 /** A large, editorial presentation of one product with quick-add and variant switching. */
@@ -19,7 +21,8 @@ export function Spotlight({ product, specs }: { product: ProductCard; specs: { l
   const price = unitPrice(product, variant);
   const was = compareAtPrice(product, variant);
 
-  const add = () => {
+  const add = (e: React.MouseEvent<HTMLElement>) => {
+    flyToCart(e.currentTarget, img?.url);
     cart.add({ variantId: variant.id, sku: variant.sku, category: product.category?.name, productId: product.id, slug: product.slug, name: product.name, variantName: variant.name, image: img?.url ?? null, unitPrice: price, maxStock: variant.stock });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -69,7 +72,7 @@ export function Spotlight({ product, specs }: { product: ProductCard; specs: { l
           </Button>
           <ButtonLink href={`/shop/${product.slug}`} variant="ghost" size="lg">Full details <ArrowRight className="size-5" /></ButtonLink>
         </div>
-        <p className="mt-5 flex items-center gap-2 text-sm text-slate"><Truck className="size-4" /> Cash on Delivery available · <Link href="/help#returns" className="underline">7-day returns</Link></p>
+        <p className="mt-5 flex items-center gap-2 text-sm text-slate"><Truck className="size-4" /> Cash on Delivery available · <IntentLink href="/help#returns" className="underline">7-day returns</IntentLink></p>
       </div>
     </div>
   );

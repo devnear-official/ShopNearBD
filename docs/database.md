@@ -84,3 +84,11 @@ Server code switches to the `anon` or `authenticated` role inside each transacti
 - `customer_sessions`: hashed session tokens (60 days) for the `sn_session` httpOnly cookie.
 - `sms_log`: masked number, gateway and response for every SMS; `dev_sms_outbox`: development/test-only stand-in for a real gateway.
 - All five tables have RLS on with no anon access; server code reaches them as the trusted role, and admins can read accounts and the SMS log. Cleanup cron removes old codes, expired sessions and old log rows.
+
+## Admin speed and customer risk (migrations 20261029001000 and 20261029001100)
+
+**For whoever runs the database:** these two migrations must be applied (`supabase db push` or `npm run db:migrate`) before this version of the app is deployed. The admin orders, customers and analytics pages read the objects below and fail without them. They are additive and safe to run on a live database.
+
+- `20261029001000_admin_speed_and_risk.sql`: `customer_stats` (one row per phone, kept current by a trigger on `orders` and backfilled from existing orders; admin read-only via RLS), trigram indexes on `orders.order_number` and `orders.phone`, an index on `shipments.order_id`, and `customer_risk(phone)` (admin only), which returns the phone's order outcomes and per-courier parcel results.
+- `20261029001100_rls_initplan.sql`: rewrites every `public` RLS policy that calls `is_admin()` or `auth.uid()` to `(select ...)` so Postgres evaluates it once per query instead of once per row. Same rules and results; at 60,000 orders it turns a 1 s `count(*)` into ~25 ms for admins.
+- Settings: product pages show an "Order on WhatsApp" button only when Admin > Settings > WhatsApp holds a valid Bangladeshi number.

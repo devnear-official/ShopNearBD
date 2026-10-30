@@ -24,6 +24,7 @@ test("order → account is created → log in with SMS code → see all orders, 
 
   // Place an order from the product page.
   await visit(page, "/shop/steel-water-bottle-750");
+  await page.getByRole("button", { name: /Buy now/ }).first().click();
   const form = page.locator("#order-now");
   await form.getByLabel("Your name").fill("Account Tester");
   await form.getByLabel(/Mobile number/).fill(phone);
@@ -37,7 +38,7 @@ test("order → account is created → log in with SMS code → see all orders, 
   // A fresh device: no saved links, logs in with the phone.
   const ctx = await browser.newContext({ viewport: page.viewportSize()! });
   const p = await ctx.newPage();
-  await p.goto(`/order/${number}`);
+  await visit(p, `/order/${number}`);
   await expect(p.getByRole("heading", { name: "Private order link needed" })).toBeVisible();
   await p.getByRole("link", { name: "Log in with your phone" }).click();
   await p.getByLabel("Mobile number").fill(phone);
@@ -50,14 +51,14 @@ test("order → account is created → log in with SMS code → see all orders, 
   await p.waitForURL(new RegExp(`/order/${number}$`));
   await expect(p.getByRole("heading", { name: /Order received/ })).toBeVisible();
 
-  await p.goto("/account");
+  await visit(p, "/account");
   await expect(p.getByRole("heading", { name: "Hi, Account" })).toBeVisible();
   await expect(p.getByText(number)).toBeVisible();
   await expect(p.getByText("Total ordered")).toBeVisible();
   await noHorizontalOverflow(p);
 
   // Checkout is pre-filled from the account.
-  await p.goto("/shop/airloop-neck-fan");
+  await visit(p, "/shop/airloop-neck-fan");
   await expect(p.locator("#order-now").getByLabel("Your name")).toHaveValue("Account Tester");
   await expect(p.locator("#order-now").getByLabel(/Full address/)).toHaveValue("House 4, KDA Avenue, Khulna");
 
@@ -65,10 +66,10 @@ test("order → account is created → log in with SMS code → see all orders, 
   const cookie = (await ctx.cookies()).find((c) => c.name === "sn_session");
   expect(cookie?.httpOnly).toBe(true);
 
-  await p.goto("/account");
+  await visit(p, "/account");
   await p.getByRole("button", { name: "Log out" }).click();
   await p.waitForURL(/\/account\/login/);
-  await p.goto(`/order/${number}`);
+  await visit(p, `/order/${number}`);
   await expect(p.getByRole("heading", { name: "Private order link needed" })).toBeVisible();
   await ctx.close();
 });
@@ -80,13 +81,13 @@ test("someone else's phone cannot open an order", async ({ browser }) => {
   const [o] = await db<{ order_number: string; phone: string }[]>`select order_number, phone from public.orders where phone <> '01633100999' order by created_at desc limit 1`;
   const ctx = await browser.newContext();
   const p = await ctx.newPage();
-  await p.goto("/account/login");
+  await visit(p, "/account/login");
   await p.getByLabel("Mobile number").fill("01633100999");
   await p.getByRole("button", { name: "Send login code" }).click();
   await p.getByLabel("6-digit code").fill(await codeFor("01633100999"));
   await p.waitForURL(/\/account$/);
   await expect(p.getByText("No orders on this number yet.")).toBeVisible();
-  await p.goto(`/order/${o.order_number}`);
+  await visit(p, `/order/${o.order_number}`);
   await expect(p.getByRole("heading", { name: "Private order link needed" })).toBeVisible();
   await ctx.close();
 });

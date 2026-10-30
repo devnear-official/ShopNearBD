@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus } from "lucide-react";
@@ -11,7 +13,15 @@ import { buttonClass } from "@/components/ui/button";
 type Row = { id: string; slug: string; name: string; sku: string; status: string; is_featured: boolean; price: number; sale_price: number | null; image: string | null; category: string | null; stock: number; low: number; variants: number; updated_at: Date };
 const TONE = { draft: "amber", published: "green", archived: "gray" } as const;
 
-export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  return (
+    <Suspense fallback={<AdminPageFallback />}>
+      <ProductsPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ProductsPageContent({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const admin = await requireAdminPage();
   const sp = await searchParams;
   const q = sp.q?.trim().slice(0, 60);

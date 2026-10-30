@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [70, 80],
+    // Product photos get a new URL when replaced, so optimised copies can be cached for a month.
+    minimumCacheTTL: 2592000,
     deviceSizes: [360, 480, 640, 768, 1024, 1280, 1600],
     remotePatterns: supabaseUrl
       ? [
