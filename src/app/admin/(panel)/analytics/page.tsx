@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth";
 import { getAnalytics } from "@/lib/admin-analytics";
@@ -9,15 +7,7 @@ import { DailyBars } from "@/components/admin/charts";
 
 const CHANNEL_LABEL: Record<string, string> = { facebook: "Facebook/Instagram", tiktok: "TikTok", google: "Google", utm_source: "Tagged link", referral: "Referral", direct: "Direct" };
 
-export default function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <AnalyticsPageContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function AnalyticsPageContent({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   await requireAdminPage();
   const range = [7, 30, 90, 365].includes(Number((await searchParams).range)) ? Number((await searchParams).range) : 30;
   const [summary, daily, byMethod, byCategory, byZone, coupons, ai, byChannel] = await getAnalytics(range);

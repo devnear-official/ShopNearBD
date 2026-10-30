@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { requireAdminPage } from "@/lib/auth";
 import { Card, PageHeader } from "@/components/admin/ui";
 import { ActionForm, Field, SubmitButton } from "@/components/admin/form";
@@ -22,15 +21,7 @@ function CategoryForm({ c }: { c?: Cat }) {
   );
 }
 
-export default function CategoriesPage() {
-  return (
-    <Suspense fallback={<div className="space-y-4"><div className="skeleton h-10 w-64 rounded-xl" /><div className="skeleton h-64 rounded-3xl" /></div>}>
-      <CategoriesContent />
-    </Suspense>
-  );
-}
-
-async function CategoriesContent() {
+export default async function CategoriesPage() {
   const admin = await requireAdminPage();
   const cats = await admin.db((tx) => tx<Cat[]>`select c.*, (select count(*)::int from public.products p where p.category_id = c.id) as products from public.categories c order by sort_order, name`);
   return (

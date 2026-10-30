@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/auth";
 import { loadProductForAdmin } from "@/lib/admin-products";
@@ -7,15 +5,7 @@ import { getPublicSettings } from "@/lib/catalog";
 import { ProductExperience } from "@/components/products/product-experience";
 
 /** Shows a product exactly as customers would, including drafts. Admin only. */
-export default function PreviewProduct({ params }: { params: Promise<{ id: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <PreviewProductContent params={params} />
-    </Suspense>
-  );
-}
-
-async function PreviewProductContent({ params }: { params: Promise<{ id: string }> }) {
+export default async function PreviewProduct({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminPage();
   const { id } = await params;
   const p = await loadProductForAdmin(admin, id);

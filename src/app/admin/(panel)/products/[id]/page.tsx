@@ -1,21 +1,12 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/auth";
 import { categoryOptions, loadProductForAdmin, toEditorValues } from "@/lib/admin-products";
 import { PageHeader } from "@/components/admin/ui";
+import { DeleteProductButton } from "@/components/admin/delete-product";
 import { ProductEditor } from "@/components/admin/product-editor";
 
-export default function EditProduct({ params }: { params: Promise<{ id: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <EditProductContent params={params} />
-    </Suspense>
-  );
-}
-
-async function EditProductContent({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditProduct({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminPage();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -24,6 +15,7 @@ async function EditProductContent({ params }: { params: Promise<{ id: string }> 
   return (
     <>
       <PageHeader title={p.name} back={{ href: "/admin/products", label: "Products" }}
+        actions={<DeleteProductButton id={p.id} name={p.name} redirectTo="/admin/products" label="Delete product" className="bg-white shadow-[var(--shadow-card)]" />}
         description={<>{p.status === "published" ? <Link href={`/shop/${p.slug}`} target="_blank" className="text-electric underline">View in store</Link> : "Not visible in the store"} · <Link href={`/admin/inventory?q=${encodeURIComponent(p.sku)}`} className="underline">Stock history</Link></>} />
       <ProductEditor key={p.id + p.image_rows.length + p.all_variants.length} categories={categories} initial={toEditorValues(p)} />
     </>

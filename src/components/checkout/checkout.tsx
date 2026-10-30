@@ -165,8 +165,8 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
   const Summary = (
     <div className="overflow-hidden rounded-[2rem] bg-white shadow-[var(--shadow-card)]">
-      <div className="h-1.5 bg-gradient-to-r from-electric via-sky to-tangerine" />
-      <div className="p-5 sm:p-6">
+      <div className="h-2 bg-gradient-to-r from-electric via-sky to-tangerine" />
+      <div className="bg-gradient-to-b from-[#f3f8ff] to-white p-5 sm:p-6">
         <ul className="space-y-3">
           {(quote?.lines ?? []).map((l) => {
             const issue = quote?.issues.find((i) => i.variant_id === l.variant_id);
@@ -188,21 +188,21 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           {!quote && <li className="skeleton h-16 rounded-2xl" />}
         </ul>
 
-        <div className="mt-5 flex gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); setAppliedCoupon(coupon.trim().toUpperCase() || undefined); }} className="mt-5 flex gap-2">
           <label htmlFor="coupon" className="sr-only">Coupon code</label>
           <div className="relative flex-1">
             <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-mist" />
-            <input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setAppliedCoupon(coupon.trim().toUpperCase() || undefined); } }} placeholder="Coupon code" className="input pl-9 uppercase" autoCapitalize="characters" />
+            <input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Coupon code" className="input pl-9 uppercase" autoCapitalize="characters" />
           </div>
-          <button type="button" onClick={() => setAppliedCoupon(coupon.trim().toUpperCase() || undefined)} className="h-12 rounded-full bg-ink px-5 text-sm font-semibold text-white transition active:scale-95">Apply</button>
-        </div>
+          <button type="submit" className="h-12 rounded-full bg-ink px-5 text-sm font-semibold text-white transition active:scale-95">Apply</button>
+        </form>
         {appliedCoupon && (couponIssue ? <p className="field-error">{couponMessage(couponIssue)}</p> : quote && quote.discount > 0 ? <p className="mt-2 text-sm font-semibold text-mint">✓ {appliedCoupon} applied</p> : null)}
 
         <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">
           <Row label="Subtotal" value={quote ? formatTaka(quote.subtotal) : "—"} />
           {quote && quote.discount > 0 && <Row label={`Discount (${appliedCoupon})`} value={`−${formatTaka(quote.discount)}`} accent />}
           <Row label={quote?.shipping ? `Delivery · ${quote.shipping.label}` : "Delivery"} value={quote?.shipping ? (quote.shipping.fee === 0 ? "Free" : formatTaka(quote.shipping.fee)) : "Choose district"} />
-          <div className="flex items-baseline justify-between border-t border-line pt-3">
+          <div className="-mx-1 mt-1 flex items-baseline justify-between rounded-2xl bg-gradient-to-r from-ink to-[#14306e] px-4 py-3.5 text-white">
             <dt className="font-semibold">Total</dt>
             <dd key={total} className="animate-price font-display text-3xl font-bold tabular-nums">{quote?.shipping ? formatTaka(total) : "—"}</dd>
           </div>
@@ -216,15 +216,23 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="mb-6 sm:mb-8">
-        <p className="eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-mint shadow-[var(--shadow-card)]"><Lock className="size-3.5" /> Secure checkout · one page</p>
-        <h1 className="display mt-4 t-page">Almost <span className="text-gradient">yours.</span></h1>
-        <p className="bn mt-1 text-base text-slate sm:text-lg" lang="bn">এক পেজেই অর্ডার সম্পন্ন করুন</p>
-        <div className="mt-5 flex max-w-md items-center gap-3" role="progressbar" aria-label="Checkout progress" aria-valuemin={0} aria-valuemax={5} aria-valuenow={done}>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white shadow-inner">
-            <div className="h-full rounded-full bg-gradient-to-r from-electric via-sky to-mint transition-[width] duration-700 ease-[var(--ease-snap)]" style={{ width: `${(done / 5) * 100}%` }} />
-          </div>
-          <span className="text-xs font-bold tabular-nums text-slate">{done === 5 ? "Ready ✓" : `${done}/5`}</span>
+      <header className="relative mb-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink via-[#14306e] to-electric p-6 text-white shadow-[var(--shadow-float)] sm:mb-8 sm:p-9">
+        <span aria-hidden className="absolute -right-16 -top-20 size-72 rounded-full bg-sky/30 blur-3xl" />
+        <span aria-hidden className="absolute -bottom-24 left-1/3 size-64 rounded-full bg-tangerine/25 blur-3xl" />
+        <Streaks tone="light" className="absolute right-6 top-6 hidden h-8 w-16 opacity-70 sm:block" />
+        <div className="relative">
+          <p className="eyebrow inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-white backdrop-blur"><Lock className="size-3.5" /> Secure checkout · one page</p>
+          <h1 className="display mt-4 t-page">Almost <span className="bg-gradient-to-r from-sun via-tangerine to-flame bg-clip-text text-transparent">yours.</span></h1>
+          <p className="bn mt-1 text-lg text-white/80" lang="bn">এক পেজেই অর্ডার সম্পন্ন করুন</p>
+          <ol className="mt-6 grid max-w-xl grid-cols-5 gap-1.5" role="progressbar" aria-label="Checkout progress" aria-valuemin={0} aria-valuemax={5} aria-valuenow={done}>
+            {["Name", "Phone", "District", "Address", "Payment"].map((label, i) => (
+              <li key={label} className="min-w-0">
+                <span className={clsx("block h-2 rounded-full transition-colors duration-500", i < done ? "bg-gradient-to-r from-sky to-mint" : "bg-white/20")} />
+                <span className={clsx("mt-1.5 block truncate text-[0.7rem] font-semibold sm:text-xs", i < done ? "text-white" : "text-white/50")}>{label}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-sm font-semibold text-sky">{done === 5 ? "All set — place your order ✓" : `${done} of 5 done`}</p>
         </div>
       </header>
 
@@ -242,7 +250,8 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           </details>
 
           {/* 1 — Delivery */}
-          <section id="delivery" aria-labelledby="h-delivery" className="scroll-mt-28 rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
+          <section id="delivery" aria-labelledby="h-delivery" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] bg-gradient-to-b from-[#f3f8ff] to-white p-5 shadow-[var(--shadow-card)] ring-1 ring-electric/10 sm:p-8">
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-electric to-sky" />
             <SectionTitle n={1} id="h-delivery" title="Where should we deliver?" bn="কোথায় পাঠাব?" done={deliveryDone} />
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field label="Full name" error={form.formState.errors.name?.message}>
@@ -289,7 +298,8 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           </section>
 
           {/* 2 — Payment */}
-          <section ref={payRef} id="payment" aria-labelledby="h-payment" className="scroll-mt-28 rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-8">
+          <section ref={payRef} id="payment" aria-labelledby="h-payment" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] bg-gradient-to-b from-[#fff6ec] to-white p-5 shadow-[var(--shadow-card)] ring-1 ring-tangerine/15 sm:p-8">
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-tangerine to-sun" />
             <SectionTitle n={2} id="h-payment" title="How would you like to pay?" bn="কীভাবে পেমেন্ট করবেন?" done={Boolean(method) && Object.keys(payErrors).length === 0} />
             <fieldset className="mt-6">
               <legend className="sr-only">Payment method</legend>
@@ -297,13 +307,13 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
                 {available.map((m) => {
                   const on = method === m;
                   return (
-                    <label key={m} className={clsx("group/pay relative flex cursor-pointer flex-col gap-2 rounded-2xl p-4 ring-1 transition-[box-shadow,background-color,transform] duration-300 active:scale-[0.98]", on ? "bg-electric/5 shadow-[var(--shadow-lift)] ring-2 ring-electric" : "ring-line hover:bg-paper")}>
+                    <label key={m} className={clsx("group/pay relative flex cursor-pointer flex-col gap-2 rounded-2xl p-4 ring-1 transition-[box-shadow,background-color,transform] duration-300 active:scale-[0.98]", on ? (m === "cod" ? "bg-mint/10 ring-2 ring-mint shadow-[0_18px_40px_-22px_rgb(16_185_129/0.7)]" : m === "bkash_manual" ? "bg-[#e2136e]/5 ring-2 ring-[#e2136e] shadow-[0_18px_40px_-22px_rgb(226_19_110/0.6)]" : "bg-[#f6921e]/10 ring-2 ring-[#f6921e] shadow-[0_18px_40px_-22px_rgb(246_146_30/0.6)]") : "bg-white ring-line hover:bg-paper")}>
                       <input type="radio" name="method" checked={on} onChange={() => { setMethod(m); setPayErrors({}); }} className="sr-only" />
                       <span className="flex items-center justify-between">
                         <span className={clsx("grid size-11 place-items-center rounded-2xl transition-colors duration-300", m === "cod" ? "bg-mint/15 text-mint" : m === "bkash_manual" ? "bg-[#e2136e]/10 text-[#e2136e]" : "bg-[#f6921e]/15 text-[#f6921e]")}>
                           {m === "cod" ? <Banknote className="size-6" /> : <Smartphone className="size-6" />}
                         </span>
-                        <span aria-hidden className={clsx("grid size-6 place-items-center rounded-full ring-2 transition-all duration-300", on ? "bg-electric text-white ring-electric" : "ring-line")}>
+                        <span aria-hidden className={clsx("grid size-6 place-items-center rounded-full ring-2 transition-all duration-300", on ? "bg-ink text-white ring-ink" : "ring-line")}>
                           {on && <Check className="animate-pop size-3.5" />}
                         </span>
                       </span>
@@ -342,7 +352,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
               onClick={(e) => { if (!placing && !placed) setOrigin(pressOrigin(e)); }}
               disabled={!placing && !placed && stockIssues.length > 0}
               aria-busy={placing}
-              className="group/cap relative flex h-16 w-full select-none items-center justify-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-electric via-electric to-electric-deep px-6 text-lg font-bold text-white shadow-[var(--shadow-lift)] transition-[transform,box-shadow] duration-200 hover:shadow-[0_22px_44px_-18px_rgb(30_107_255/0.75)] active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50"
+              className="group/cap relative flex h-16 w-full select-none items-center justify-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-tangerine via-[#ff6a1a] to-flame px-6 text-lg font-bold text-white shadow-[0_18px_40px_-16px_rgb(255_90_30/0.8)] transition-[transform,box-shadow] duration-200 hover:shadow-[0_24px_48px_-16px_rgb(255_90_30/0.9)] active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50"
             >
               <CapsuleFill on={placing || placed} origin={origin} className={placed ? "bg-mint" : undefined} />
               <CapsuleShine />
@@ -354,7 +364,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
               {placing && !placed && (
                 <>
                   <span aria-hidden className="pointer-events-none absolute inset-0">
-                    <ShoppingCart className="animate-sweep absolute top-1/2 size-7 -translate-y-1/2 text-tangerine" />
+                    <ShoppingCart className="animate-sweep absolute top-1/2 size-7 -translate-y-1/2 text-white" />
                   </span>
                   <span className="absolute inset-0 grid place-items-center text-base font-semibold">Placing your order…</span>
                 </>
@@ -364,16 +374,16 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           </div>
 
           <ul className="grid gap-2 text-xs font-semibold text-slate sm:grid-cols-3">
-            <li className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2.5"><ShieldCheck className="size-4 shrink-0 text-mint" /> Verified by our team</li>
-            <li className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2.5"><Truck className="size-4 shrink-0 text-electric" /> Delivery across Bangladesh</li>
-            <li className="flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2.5"><RotateCcw className="size-4 shrink-0 text-tangerine" /> 7-day returns</li>
+            <li className="flex items-center gap-2 rounded-2xl bg-mint/10 px-3 py-3 text-[#0b7a55]"><ShieldCheck className="size-5 shrink-0 text-mint" /> Verified by our team</li>
+            <li className="flex items-center gap-2 rounded-2xl bg-electric/10 px-3 py-3 text-electric-deep"><Truck className="size-5 shrink-0 text-electric" /> Delivery across Bangladesh</li>
+            <li className="flex items-center gap-2 rounded-2xl bg-tangerine/10 px-3 py-3 text-[#b8510b]"><RotateCcw className="size-5 shrink-0 text-tangerine" /> 7-day returns</li>
           </ul>
           <p className="text-xs text-slate">By placing the order you agree to our <Link href="/help#returns" className="underline">returns & refund policy</Link>. {method === "cod" ? "You pay when the parcel arrives." : "Your order is confirmed once we verify the payment."}</p>
         </form>
 
         <aside className="hidden lg:block">
           <div className="sticky top-28">
-            <h2 className="display mb-4 t-card">Order summary</h2>
+            <h2 className="display mb-4 flex items-center gap-2 t-card"><ShoppingCart className="size-5 text-tangerine" /> Order summary</h2>
             {Summary}
           </div>
         </aside>
@@ -385,7 +395,7 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
 function SectionTitle({ n, id, title, bn, done }: { n: number; id: string; title: string; bn: string; done: boolean }) {
   return (
     <div className="flex items-center gap-4">
-      <span aria-hidden className={clsx("grid size-11 shrink-0 place-items-center rounded-2xl font-display text-lg font-bold text-white transition-colors duration-500", done ? "bg-mint" : "bg-gradient-to-br from-electric to-sky")}>
+      <span aria-hidden className={clsx("grid size-11 shrink-0 place-items-center rounded-2xl font-display text-lg font-bold text-white transition-colors duration-500", done ? "bg-mint shadow-[0_10px_20px_-8px_rgb(16_185_129/0.7)]" : n === 1 ? "bg-gradient-to-br from-electric to-sky shadow-[0_10px_20px_-8px_rgb(30_107_255/0.7)]" : "bg-gradient-to-br from-tangerine to-flame shadow-[0_10px_20px_-8px_rgb(255_122_26/0.7)]")}>
         {done ? <Check className="animate-pop size-5" /> : n}
       </span>
       <div className="min-w-0">

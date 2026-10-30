@@ -25,11 +25,10 @@ export default async function HomePage() {
   const hero = heroList[0] ?? featured[0] ?? null;
   const spotlight = featured.find((p) => p.slug !== hero?.slug) ?? null;
   const spotlightDetail = spotlight ? await getProduct(spotlight.slug) : null;
-  const orbit = featured.filter((p) => p.slug !== hero?.slug && p.slug !== spotlight?.slug);
 
   return (
     <>
-      <Hero copy={home} hero={hero} orbit={orbit} />
+      <Hero copy={home} hero={hero} />
       <Marquee items={home.marquee} />
 
       <section aria-labelledby="cats" className="mx-auto mt-24 max-w-7xl px-4 sm:px-8">

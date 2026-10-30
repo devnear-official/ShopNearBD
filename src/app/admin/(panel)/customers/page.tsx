@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth";
 import { formatDate, formatTaka } from "@/lib/format";
@@ -6,15 +5,7 @@ import { Card, Empty, PageHeader, Pager, Table } from "@/components/admin/ui";
 import { buttonClass } from "@/components/ui/button";
 
 /** Customers are grouped by phone number (guest checkout is the norm in Bangladesh). */
-export default function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
-  return (
-    <Suspense fallback={<div className="space-y-4"><div className="skeleton h-10 w-64 rounded-xl" /><div className="skeleton h-64 rounded-3xl" /></div>}>
-      <CustomersContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function CustomersContent({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
+export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const admin = await requireAdminPage();
   const sp = await searchParams;
   const q = sp.q?.trim().slice(0, 60);

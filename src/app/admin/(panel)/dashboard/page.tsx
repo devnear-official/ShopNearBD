@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth";
 import { formatDateTime, formatTaka } from "@/lib/format";
@@ -15,15 +13,7 @@ type Metrics = {
   daily: { day: string; orders: number; value: number }[];
 };
 
-export default function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <DashboardContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function DashboardContent({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const admin = await requireAdminPage();
   const range = [7, 30, 90].includes(Number((await searchParams).range)) ? Number((await searchParams).range) : 30;
   const to = new Date();

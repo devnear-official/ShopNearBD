@@ -1,11 +1,10 @@
 "use server";
 import { revalidatePath, updateTag } from "next/cache";
-import sharp from "sharp";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { productSchema } from "@/lib/validation/product";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { randomToken } from "@/lib/tokens";
+import { destroyImages, uploadSignature } from "@/lib/cloudinary";
 import type { ActionState } from "@/components/admin/form";
 
 export type SaveResult = { ok: true; id: string; slug: string } | { ok: false; error: string; fieldErrors?: Record<string, string> };
@@ -67,7 +66,7 @@ export async function saveProduct(input: unknown): Promise<SaveResult> {
       }
 
       // Images in the order given.
-      const oldImages = await tx<{ id: string; storage_path: string | null }[]>`select id, storage_path from public.product_images where product_id = ${id}`;
+      const oldImages = await tx<{ id: string; url: string; storage_path: string | null }[]>`select id, url, storage_path from public.product_images where product_id = ${id}`;
       const keepImg = new Set(p.images.map((i) => i.id).filter(Boolean));
       const removed = oldImages.filter((o) => !keepImg.has(o.id));
       if (removed.length) await tx`delete from public.product_images where id = any(${removed.map((r) => r.id)})`;
@@ -79,9 +78,10 @@ export async function saveProduct(input: unknown): Promise<SaveResult> {
 
       await tx`insert into public.audit_logs (actor_id, actor_label, action, entity, entity_id, data)
         values (${admin.id}, ${admin.email ?? "admin"}, ${p.id ? "product.update" : "product.create"}, 'product', ${id}, ${tx.json({ status: p.status, previous_status: previousStatus, price: p.price, sale_price: p.sale_price })})`;
-      return { id: id!, removedPaths: removed.map((r) => r.storage_path).filter(Boolean) as string[] };
+      return { id: id!, removedPaths: removed.map((r) => r.storage_path).filter(Boolean) as string[], removedUrls: removed.map((r) => r.url) };
     });
     if (result.removedPaths.length) await supabaseAdmin().storage.from("product-images").remove(result.removedPaths).catch(() => {});
+    await destroyImages(result.removedUrls);
     updateTag("catalog");
     updateTag(`product:${p.slug}`);
     revalidatePath("/admin/products");
@@ -97,26 +97,39 @@ export async function saveProduct(input: unknown): Promise<SaveResult> {
   }
 }
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
-
-/** Validates, normalises (max 1600px, WebP) and stores a product image. */
-export async function uploadProductImage(form: FormData): Promise<{ ok: true; url: string; path: string; width: number; height: number } | { ok: false; error: string }> {
+/** One-time permission for the browser to upload a product image to Cloudinary. */
+export async function getImageUploadSignature(): Promise<{ ok: true; params: NonNullable<ReturnType<typeof uploadSignature>> } | { ok: false; error: string }> {
   try { await requireAdmin(); } catch { return { ok: false, error: "Not allowed." }; }
-  const file = form.get("file");
-  if (!(file instanceof File)) return { ok: false, error: "No file." };
-  if (!IMAGE_TYPES.includes(file.type)) return { ok: false, error: `${file.name}: use JPG, PNG, WebP or AVIF.` };
-  if (file.size > 8 * 1024 * 1024) return { ok: false, error: `${file.name}: larger than 8 MB.` };
+  const params = uploadSignature();
+  return params ? { ok: true, params } : { ok: false, error: "Image uploads aren't set up: add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET." };
+}
+
+/** Removes a product for good. Past orders keep their own copy of name, price and photo. */
+export async function deleteProduct(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Invalid request." };
+  let admin;
+  try { admin = await requireAdmin(); } catch { return { ok: false, error: "Your session expired. Sign in again." }; }
   try {
-    const img = sharp(Buffer.from(await file.arrayBuffer()), { failOn: "error" }).rotate().resize({ width: 1600, height: 2000, fit: "inside", withoutEnlargement: true });
-    const { data, info } = await img.webp({ quality: 82 }).toBuffer({ resolveWithObject: true });
-    const path = `products/${new Date().toISOString().slice(0, 7)}/${randomToken(10)}.webp`;
-    const sb = supabaseAdmin();
-    const { error } = await sb.storage.from("product-images").upload(path, data, { contentType: "image/webp", upsert: false, cacheControl: "31536000" });
-    if (error) throw error;
-    return { ok: true, url: sb.storage.from("product-images").getPublicUrl(path).data.publicUrl, path, width: info.width, height: info.height };
+    const gone = await admin.db(async (tx) => {
+      const [p] = await tx<{ name: string; slug: string }[]>`select name, slug from public.products where id = ${id} for update`;
+      if (!p) return null;
+      const images = await tx<{ url: string; storage_path: string | null }[]>`select url, storage_path from public.product_images where product_id = ${id}`;
+      await tx`delete from public.products where id = ${id}`;
+      await tx`insert into public.audit_logs (actor_id, actor_label, action, entity, entity_id, data)
+        values (${admin.id}, ${admin.email ?? "admin"}, 'product.delete', 'product', ${id}, ${tx.json({ name: p.name, slug: p.slug })})`;
+      return { slug: p.slug, images };
+    });
+    if (!gone) return { ok: false, error: "That product no longer exists." };
+    const paths = gone.images.map((i) => i.storage_path).filter(Boolean) as string[];
+    if (paths.length) await supabaseAdmin().storage.from("product-images").remove(paths).catch(() => {});
+    await destroyImages(gone.images.map((i) => i.url));
+    updateTag("catalog");
+    updateTag(`product:${gone.slug}`);
+    revalidatePath("/admin/products");
+    return { ok: true };
   } catch (e) {
-    console.error("uploadProductImage", e);
-    return { ok: false, error: `${file.name}: couldn't process this image.` };
+    console.error("deleteProduct", e);
+    return { ok: false, error: "Couldn't delete the product. Please try again." };
   }
 }
 

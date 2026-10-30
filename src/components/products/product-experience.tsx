@@ -150,14 +150,14 @@ ${url}` : ""}`;
 
         <div className="lg:sticky lg:top-28 lg:h-max">
           {product.category && <IntentLink href={`/shop?category=${product.category.slug}`} className="eyebrow -my-3 inline-flex min-h-10 items-center text-electric hover:underline">{product.category.name}</IntentLink>}
-          <h1 className="display mt-3 t-page">{product.name}</h1>
-          {product.name_bn && <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">{product.name_bn}</p>}
-          <p className="mt-4 text-base sm:text-lg text-slate">{product.short_description}</p>
+          <h1 className="display mt-3 t-section">{product.name}</h1>
+          {product.name_bn && <p className="bn mt-1.5 text-sm text-slate sm:text-base" lang="bn">{product.name_bn}</p>}
+          <p className="mt-3 text-sm text-slate sm:text-base">{product.short_description}</p>
 
-          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
             <AnimatePresence mode="popLayout" initial={false}>
               <m.span key={price} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -10, opacity: 0 }}>
-                <Price value={price} compareAt={was} size="xl" />
+                <Price value={price} compareAt={was} size="lg" />
               </m.span>
             </AnimatePresence>
             <StockBadge stock={stock} threshold={product.low_stock_threshold} />

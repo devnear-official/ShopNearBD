@@ -283,3 +283,40 @@
   .ride-box, .ride-streaks { animation: none; opacity: 1; }
   .ride-streaks { opacity: 0; }
 }
+
+/* Admin tables on phones: each row becomes a card, each cell "label ····· value". */
+@media (max-width: 767px) {
+  .rtable table { min-width: 0; }
+  .rtable thead { display: none; }
+  .rtable tbody { display: grid; gap: 0.75rem; padding: 0.75rem; }
+  .rtable tbody > tr { display: block; border-radius: 1.25rem; background: var(--color-paper); padding: 0.5rem 1rem; }
+  .rtable td { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; text-align: right; }
+  .rtable td[data-label]::before { content: attr(data-label); flex-shrink: 0; text-align: left; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-slate); }
+  .rtable td:not([data-label]) { justify-content: flex-start; text-align: left; }
+  .rtable td[colspan] { display: block; text-align: center; }
+}
+
+/* Hero scene: the cart rolls in, then idles; goods hop, chips and parcels float. Transforms only. */
+@keyframes hero-cart-in { from { transform: translateX(-78%); opacity: 0; } 55% { opacity: 1; } 78% { transform: translateX(3%); } to { transform: none; } }
+@keyframes hero-bag-in { from { transform: translateY(40px) scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes hero-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-9px) rotate(0.7deg); } }
+@keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--fa, 7px) * -1)); } }
+@keyframes hero-hop { 0%, 14%, 100% { transform: translateY(0); } 6% { transform: translateY(-16px); } 10% { transform: translateY(2px); } }
+@keyframes hero-wheel-in { from { transform: rotate(-1080deg); } to { transform: rotate(0); } }
+@keyframes hero-wheel-idle { to { transform: rotate(360deg); } }
+@keyframes hero-streaks { 0%, 100% { opacity: 0; transform: translateX(14px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateX(-14px); } }
+@keyframes hero-tile { from { opacity: 0; transform: scale(0.6); } }
+@keyframes hero-phone-in { from { opacity: 0; transform: translateY(30px) rotate(-3deg); } }
+.hero-cart-in { animation: hero-cart-in 1.15s cubic-bezier(0.2, 0.9, 0.25, 1) 0.1s both; }
+.hero-cart-bob { animation: hero-bob 4.2s ease-in-out 1.3s infinite; }
+.hero-bag-in { animation: hero-bag-in 0.8s cubic-bezier(0.34, 1.4, 0.64, 1) 0.9s both; }
+.hero-float { animation: hero-float 5s ease-in-out var(--fd, 0s) infinite; }
+.hero-hop { animation: hero-hop 5.2s ease-in-out var(--hd, 1.5s) infinite; }
+.fb { transform-box: fill-box; transform-origin: 50% 100%; }
+.hero-wheel { animation: hero-wheel-in 1.15s cubic-bezier(0.2, 0.9, 0.25, 1) 0.1s both, hero-wheel-idle 9s linear 1.25s infinite; }
+.hero-streaks { animation: hero-streaks 1.4s ease-out 0.1s 3 both; }
+.hero-tile { animation: hero-tile 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) var(--td, 0.6s) both; }
+.hero-phone { animation: hero-phone-in 0.8s var(--ease-snap) both; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-cart-in, .hero-cart-bob, .hero-bag-in, .hero-float, .hero-hop, .hero-wheel, .hero-streaks, .hero-tile, .hero-phone { animation: none; }
+}

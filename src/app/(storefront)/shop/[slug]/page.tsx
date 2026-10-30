@@ -12,14 +12,17 @@ import { ProductGrid } from "@/components/products/product-grid";
 
 type Params = { params: Promise<{ slug: string }> };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BUILD_PLACEHOLDER = "__build_placeholder__";
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
+  if (slugs.length === 0) return [{ slug: BUILD_PLACEHOLDER }];
   return slugs.slice(0, 200).map((s) => ({ slug: s.slug }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
+  if (slug === BUILD_PLACEHOLDER) return { title: "Product not found", robots: { index: false } };
   const p = await getProduct(slug);
   if (!p) return { title: "Product not found", robots: { index: false } };
   const image = p.og_image_url ?? p.images[0]?.url;
@@ -51,6 +54,7 @@ function ProductSkeleton() {
 
 async function ProductView({ params }: Params) {
   const { slug } = await params;
+  if (slug === BUILD_PLACEHOLDER) notFound();
   const product = await getProduct(slug);
   if (!product) notFound();
   // /shop/<uuid> keeps working but canonicalises to the readable slug.
@@ -104,7 +108,7 @@ async function ProductView({ params }: Params) {
         <ProductExperience product={product} shipping={settings.shipping} payments={settings.payments} whatsapp={settings.store.whatsapp}>
           <div className="mt-8 divide-y divide-line rounded-[1.5rem] bg-white shadow-[var(--shadow-card)]">
             <Details title="Description" open>
-              <p className="whitespace-pre-line leading-relaxed text-ink-2">{product.description}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink-2">{product.description}</p>
             </Details>
             {product.specifications.length > 0 && (
               <Details title="Specifications" open>

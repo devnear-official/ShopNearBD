@@ -14,22 +14,27 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   poweredByHeader: false,
   serverExternalPackages: ["postgres"],
+  // Payment screenshots (checkout) still go through a server action; the 1 MB default rejects most phone photos.
+  experimental: { serverActions: { bodySizeLimit: "10mb" } },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [70, 80],
     // Product photos get a new URL when replaced, so optimised copies can be cached for a month.
     minimumCacheTTL: 2592000,
     deviceSizes: [360, 480, 640, 768, 1024, 1280, 1600],
-    remotePatterns: supabaseUrl
+    remotePatterns: [
+      { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
+      ...(supabaseUrl
       ? [
           {
             protocol: supabaseUrl.protocol.replace(":", "") as "http" | "https",
             hostname: supabaseUrl.hostname,
             port: supabaseUrl.port,
             pathname: "/storage/v1/object/public/**",
-          },
+          } as const,
         ]
-      : [],
+      : []),
+    ],
     // Local development stack serves storage from 127.0.0.1.
     dangerouslyAllowLocalIP: supabaseUrl?.hostname === "127.0.0.1" || supabaseUrl?.hostname === "localhost",
   },

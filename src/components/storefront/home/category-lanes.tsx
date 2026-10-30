@@ -1,67 +1,74 @@
 "use client";
 import Image from "next/image";
 import { IntentLink } from "@/components/ui/intent-link";
-import { useState } from "react";
-import * as m from "motion/react-m";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Gem, Headphones, LayoutGrid, Shirt, ShoppingBag, Smartphone, Sofa, Sparkles, Watch } from "lucide-react";
 import clsx from "clsx";
 import type { Category } from "@/lib/catalog";
 
+const ICONS: [RegExp, typeof Watch][] = [
+  [/wear|watch/i, Watch], [/audio|head|earb|sound/i, Headphones], [/fashion|cloth|shirt|bag/i, Shirt],
+  [/home|living|kitchen|furni/i, Sofa], [/beauty|care|skin/i, Sparkles], [/phone|mobile|gadget|electr/i, Smartphone], [/access|jewel/i, Gem],
+];
+const iconFor = (name: string) => ICONS.find(([re]) => re.test(name))?.[1] ?? ShoppingBag;
+
+/** Darkens a hex colour so each card gets a two-tone gradient from the category's accent. */
+function shade(hex: string, amt: number) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * (1 - amt))));
+  return `rgb(${ch(n >> 16)} ${ch((n >> 8) & 255)} ${ch(n & 255)})`;
+}
+
 /**
- * Category "lanes": on desktop, an accordion of tall lanes — the hovered or
- * focused lane widens and reveals its product. On touch screens they become a
- * swipeable row of full cards (nothing hidden behind hover).
+ * Category bento: bold gradient tiles, the first one large. Each tile shows a product photo
+ * that lifts on hover, a count pill and an arrow that slides. Same layout on phones (2 columns).
  */
 export function CategoryLanes({ categories }: { categories: Category[] }) {
-  const [active, setActive] = useState(0);
   return (
-    <>
-      <div className="hidden h-[30rem] gap-3 lg:flex" onMouseLeave={() => setActive(active)}>
-        {categories.map((c, i) => {
-          const open = i === active;
-          return (
-            <m.div key={c.slug} layout className={clsx("relative overflow-hidden rounded-[2rem]", open ? "flex-[3.2]" : "flex-1")}
-              transition={{ type: "spring", stiffness: 180, damping: 26 }} onMouseEnter={() => setActive(i)}>
-              <IntentLink href={`/shop?category=${c.slug}`} onFocus={() => setActive(i)} className="group absolute inset-0 flex flex-col justify-between p-6 text-white" style={{ background: c.accent ?? "#1E6BFF" }}>
-                {c.cover && (
-                  <Image src={c.cover} alt="" fill sizes="40vw" className={clsx("object-cover transition-all duration-700", open ? "opacity-100 scale-100" : "opacity-0 scale-110")} />
-                )}
-                <span className={clsx("absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent transition-opacity", open ? "opacity-100" : "opacity-0")} />
-                <span className="relative font-display text-5xl font-bold opacity-90">{String(i + 1).padStart(2, "0")}</span>
-                <span className="relative">
-                  <span className={clsx("block font-display font-bold leading-none transition-all duration-500", open ? "text-4xl" : "text-2xl [writing-mode:vertical-rl] rotate-180 whitespace-nowrap")}>{c.name}</span>
-                  {open && (
-                    <m.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-3 flex items-end justify-between gap-4">
-                      <span className="max-w-xs text-sm text-white/85">
-                        {c.name_bn && <span className="bn mb-1 block text-base font-semibold" lang="bn">{c.name_bn}</span>}
-                        {c.description}
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink">
-                        {c.product_count} products <ArrowUpRight className="size-4" />
-                      </span>
-                    </m.span>
-                  )}
-                </span>
-              </IntentLink>
-            </m.div>
-          );
-        })}
-      </div>
+    <ul className="grid auto-rows-[11.5rem] grid-cols-2 gap-3 sm:auto-rows-[14rem] sm:gap-4 lg:grid-cols-4">
+      {categories.map((c, i) => {
+        const accent = c.accent ?? "#1E6BFF";
+        const Icon = iconFor(c.name);
+        const big = i === 0;
+        return (
+          <li key={c.slug} className={clsx("pop-in", big && "col-span-2 row-span-2")} style={{ ["--d" as string]: `${i * 70}ms` }}>
+            <IntentLink href={`/shop?category=${c.slug}`} className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[1.75rem] p-4 text-white shadow-[var(--shadow-card)] transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-[var(--shadow-float)] sm:rounded-[2.25rem] sm:p-6"
+              style={{ background: `linear-gradient(150deg, ${accent} 0%, ${shade(accent, 0.38)} 100%)` }}>
+              {/* decorative rings and glow */}
+              <span aria-hidden className="absolute -right-10 -top-10 size-40 rounded-full border-[18px] border-white/10 transition-transform duration-700 group-hover:scale-125 sm:size-56" />
+              <span aria-hidden className="absolute -bottom-16 -left-10 size-48 rounded-full bg-white/10 blur-2xl" />
+              <Icon aria-hidden className="absolute right-4 top-4 size-16 text-white/15 sm:size-24" strokeWidth={1.2} />
 
-      <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 lg:hidden">
-        {categories.map((c, i) => (
-          <IntentLink key={c.slug} href={`/shop?category=${c.slug}`} className="relative flex aspect-[3/4] w-[68%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[1.75rem] p-5 text-white sm:w-[40%]" style={{ background: c.accent ?? "#1E6BFF" }}>
-            {c.cover && <Image src={c.cover} alt="" fill sizes="70vw" className="object-cover" />}
-            <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10" />
-            <span className="relative font-display text-3xl font-bold">{String(i + 1).padStart(2, "0")}</span>
-            <span className="relative">
-              <span className="block font-display text-2xl font-bold leading-none">{c.name}</span>
-              {c.name_bn && <span className="bn mt-1 block font-semibold text-white/85" lang="bn">{c.name_bn}</span>}
-              <span className="mt-2 block text-sm text-white/80">{c.product_count} products →</span>
-            </span>
-          </IntentLink>
-        ))}
-      </div>
-    </>
+              {c.cover && (
+                <span className={clsx("absolute bottom-0 right-0 block overflow-hidden rounded-tl-[2.5rem] bg-white/15 shadow-[-0.5rem_-0.5rem_2rem_rgb(0_0_0/0.15)] transition-transform duration-700 ease-[var(--ease-snap)] group-hover:-translate-x-1 group-hover:-translate-y-2 group-hover:scale-105", big ? "size-[56%]" : "size-[42%]")}>
+                  <Image src={c.cover} alt="" fill sizes={big ? "(min-width:1024px) 22vw, 60vw" : "(min-width:1024px) 14vw, 28vw"} className="object-cover" />
+                </span>
+              )}
+
+              <span className="relative flex items-center justify-between">
+                <span className="font-display text-sm font-bold tabular-nums text-white/70 sm:text-base">{String(i + 1).padStart(2, "0")}</span>
+              </span>
+              <span className={clsx("relative", big ? "max-w-[44%]" : "max-w-[62%] sm:max-w-[60%]")}>
+                <span className={clsx("block font-display font-bold leading-[1.05] drop-shadow-sm", big ? "text-3xl sm:text-5xl" : "text-xl sm:text-2xl")}>{c.name}</span>
+                {c.name_bn && <span className="bn mt-0.5 block text-sm font-semibold text-white/85 sm:text-base" lang="bn">{c.name_bn}</span>}
+                {big && c.description && <span className="mt-3 hidden max-w-xs text-sm text-white/80 sm:block">{c.description}</span>}
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-3 pr-1 text-xs font-bold text-ink sm:text-sm">
+                  <span className="whitespace-nowrap">{c.product_count} item{c.product_count === 1 ? "" : "s"}</span>
+                  <span className="grid size-6 place-items-center rounded-full bg-ink text-white transition-transform duration-300 group-hover:rotate-45"><ArrowUpRight className="size-3.5" /></span>
+                </span>
+              </span>
+            </IntentLink>
+          </li>
+        );
+      })}
+      <li className="pop-in" style={{ ["--d" as string]: `${categories.length * 70}ms` }}>
+        <IntentLink href="/shop" className="group flex h-full flex-col items-center justify-center gap-3 rounded-[1.75rem] border-2 border-dashed border-electric/30 bg-white/60 p-4 text-center transition hover:border-electric hover:bg-white sm:rounded-[2.25rem]">
+          <span className="grid size-14 place-items-center rounded-full bg-electric text-white transition-transform duration-300 group-hover:scale-110"><LayoutGrid className="size-6" /></span>
+          <span className="font-display text-lg font-bold">Browse everything</span>
+          <span className="text-sm text-slate">See the full shop →</span>
+        </IntentLink>
+      </li>
+    </ul>
   );
 }
