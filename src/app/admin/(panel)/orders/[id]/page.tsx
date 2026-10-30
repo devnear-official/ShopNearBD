@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -33,15 +31,7 @@ type Order = {
   attribution: Record<string, string> | null; purchase_tracked_at: Date | null;
 };
 
-export default function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <OrderDetailContent params={params} />
-    </Suspense>
-  );
-}
-
-async function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminPage();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();

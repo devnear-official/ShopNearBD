@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth";
 import { PROVIDERS } from "@/lib/couriers";
@@ -7,15 +5,7 @@ import { siteUrl } from "@/lib/env";
 import { formatDateTime, formatTaka } from "@/lib/format";
 import { Badge, Card, Empty, PageHeader, Table } from "@/components/admin/ui";
 
-export default function CouriersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <CouriersPageContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function CouriersPageContent({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function CouriersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const admin = await requireAdminPage();
   const status = (await searchParams).status;
   const [shipments, recon, events] = await admin.db((tx) => Promise.all([

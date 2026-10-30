@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import { requireAdminPage } from "@/lib/auth";
 import { formatDate, formatTaka } from "@/lib/format";
 import { Badge, Card, PageHeader } from "@/components/admin/ui";
@@ -29,15 +27,7 @@ function CouponForm({ c }: { c?: C }) {
   );
 }
 
-export default function CouponsPage() {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <CouponsPageContent  />
-    </Suspense>
-  );
-}
-
-async function CouponsPageContent() {
+export default async function CouponsPage() {
   const admin = await requireAdminPage();
   const rows = await admin.db((tx) => tx<C[]>`select c.*, coalesce((select sum(amount) from public.coupon_redemptions r where r.coupon_id = c.id), 0) as discount_total from public.coupons c order by created_at desc`);
   return (

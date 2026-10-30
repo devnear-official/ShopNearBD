@@ -6,15 +6,18 @@ import { getCategories, listProducts } from "@/lib/catalog";
 import { ProductGrid } from "@/components/products/product-grid";
 import { ButtonLink } from "@/components/ui/button";
 
+const BUILD_PLACEHOLDER = "__build_placeholder__";
+
 /** Crawlable, statically generated category landing pages. Filtering lives on /shop. */
 export async function generateStaticParams() {
   const cats = await getCategories();
-  const params = cats.map((c) => ({ slug: c.slug }));
-  return params.length ? params : [{ slug: "__build_placeholder__" }];
+  if (cats.length === 0) return [{ slug: BUILD_PLACEHOLDER }];
+  return cats.map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  if (slug === BUILD_PLACEHOLDER) return { title: "Category not found", robots: { index: false } };
   const cat = (await getCategories()).find((c) => c.slug === slug);
   if (!cat) return { title: "Category not found" };
   return {
@@ -30,6 +33,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
 async function CategoryView({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (slug === BUILD_PLACEHOLDER) notFound();
   const cat = (await getCategories()).find((c) => c.slug === slug);
   if (!cat) notFound();
   const { items, total } = await listProducts({ category: slug, pageSize: 24, sort: "popular" });

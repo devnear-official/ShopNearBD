@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
@@ -7,15 +6,7 @@ import { ActionForm, SubmitButton } from "@/components/admin/form";
 import { adjustStock } from "@/actions/admin-catalog";
 import { buttonClass } from "@/components/ui/button";
 
-export default function InventoryPage({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
-  return (
-    <Suspense fallback={<div className="space-y-4"><div className="skeleton h-10 w-64 rounded-xl" /><div className="skeleton h-64 rounded-3xl" /></div>}>
-      <InventoryContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function InventoryContent({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
   const admin = await requireAdminPage();
   const sp = await searchParams;
   const q = sp.q?.trim().slice(0, 60);

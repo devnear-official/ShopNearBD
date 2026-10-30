@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth";
@@ -10,15 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 
 const METHOD: Record<string, string> = { cod: "COD", bkash_manual: "bKash", nagad_manual: "Nagad" };
 
-export default function OrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <OrdersPageContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function OrdersPageContent({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const admin = await requireAdminPage();
   const f = parseOrderFilters(await searchParams);
   const size = 20;

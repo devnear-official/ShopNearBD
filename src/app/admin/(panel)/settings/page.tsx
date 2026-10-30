@@ -1,5 +1,4 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
+import { SOCIALS } from "@/lib/social";
 import Link from "next/link";
 import clsx from "clsx";
 import { AlertTriangle } from "lucide-react";
@@ -22,15 +21,7 @@ type TrackingRow = { id: number; platform: string; event_name: string; event_id:
 type TrackingSettingsRow = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
 type AiSettings = { enabled: boolean; model: string; temperature: number; max_output_tokens: number; per_ip_per_minute: number; per_conversation_per_hour: number; retention_days: number; greeting: string };
 
-export default function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <SettingsPageContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function SettingsPageContent({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const admin = await requireAdminPage();
   const requested = (await searchParams).tab;
   const tab = TABS.some(([k]) => k === requested) ? requested! : "store";
@@ -99,7 +90,7 @@ function StoreForm({ v }: { v: StoreSettings }) {
         <Field label="Tagline (Bangla)" name="tagline_bn" defaultValue={v.tagline_bn} />
         <Field label="Address" name="address" defaultValue={v.address} required />
         <Field label="Support hours" name="hours" defaultValue={v.hours} />
-        {(["facebook", "instagram", "tiktok", "youtube"] as const).map((k) => <Field key={k} label={`${k[0].toUpperCase()}${k.slice(1)} URL`} name={k} type="url" defaultValue={v.social?.[k] ?? ""} />)}
+        {SOCIALS.map((x) => <Field key={x.key} label={`${x.label} link`} name={x.key} type="url" placeholder="https://" defaultValue={v.social?.[x.key] ?? ""} />)}
       </div>
     </Form>
   );

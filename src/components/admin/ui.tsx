@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 
 export function PageHeader({ title, description, actions, back }: { title: string; description?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
   return (
@@ -59,12 +59,26 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="rounded-2xl bg-paper p-6 text-center text-sm text-slate">{children}</p>;
 }
 
+/**
+ * Wide on tablets and up; on phones every row becomes a small card whose cells carry their column
+ * name (see `.rtable` in globals.css). Rows must be plain `<tr><td>` elements.
+ */
 export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
+  const labelled = Children.map(children, (row) => {
+    if (!isValidElement(row)) return row;
+    const tr = row as ReactElement<{ children?: ReactNode }>;
+    let col = -1;
+    return cloneElement(tr, undefined, Children.map(tr.props.children, (cell) => {
+      col++;
+      const label = head[col];
+      return isValidElement(cell) && typeof label === "string" && label ? cloneElement(cell as ReactElement<Record<string, unknown>>, { "data-label": label }) : cell;
+    }));
+  });
   return (
-    <div className="overflow-x-auto">
+    <div className="rtable overflow-x-auto">
       <table className="w-full min-w-[40rem] text-left text-sm">
         <thead><tr className="border-b border-line text-xs uppercase tracking-wider text-slate">{head.map((h, i) => <th key={i} className="whitespace-nowrap px-4 py-3 font-semibold">{h}</th>)}</tr></thead>
-        <tbody className="divide-y divide-line">{children}</tbody>
+        <tbody className="divide-y divide-line">{labelled}</tbody>
       </table>
     </div>
   );

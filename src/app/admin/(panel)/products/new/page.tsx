@@ -1,19 +1,9 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import { requireAdminPage } from "@/lib/auth";
 import { categoryOptions } from "@/lib/admin-products";
 import { PageHeader } from "@/components/admin/ui";
 import { ProductEditor } from "@/components/admin/product-editor";
 
-export default function NewProduct() {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <NewProductContent  />
-    </Suspense>
-  );
-}
-
-async function NewProductContent() {
+export default async function NewProduct() {
   const admin = await requireAdminPage();
   const categories = await categoryOptions(admin);
   return (

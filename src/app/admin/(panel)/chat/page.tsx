@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { AdminPageFallback } from "@/components/admin/page-fallback";
 import Link from "next/link";
 import clsx from "clsx";
 import { requireAdminPage } from "@/lib/auth";
@@ -13,15 +11,7 @@ type Conv = { id: string; status: string; mode: string; needs_human: boolean; ad
 type Faq = { id: string; question: string; answer: string; tags: string[]; sort_order: number; is_active: boolean };
 type Msg = { id: number; role: string; content: string; created_at: Date; meta: { intent?: string; source?: string } };
 
-export default function ChatAdmin({ searchParams }: { searchParams: Promise<{ c?: string; filter?: string; tab?: string }> }) {
-  return (
-    <Suspense fallback={<AdminPageFallback />}>
-      <ChatAdminContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function ChatAdminContent({ searchParams }: { searchParams: Promise<{ c?: string; filter?: string; tab?: string }> }) {
+export default async function ChatAdmin({ searchParams }: { searchParams: Promise<{ c?: string; filter?: string; tab?: string }> }) {
   const admin = await requireAdminPage();
   const sp = await searchParams;
   const tab = sp.tab === "faq" ? "faq" : sp.tab === "ai" ? "ai" : "inbox";
