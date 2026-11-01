@@ -321,26 +321,7 @@
   .hero-cart-in, .hero-cart-bob, .hero-bag-in, .hero-float, .hero-hop, .hero-wheel, .hero-streaks, .hero-tile, .hero-phone { animation: none; }
 }
 
-/* Category journey: roads draw in, lane dashes march, nodes float, travellers bob and walk. */
-@keyframes sn-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes sn-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.2px); } }
-@keyframes sn-leg-a { 0%, 100% { transform: rotate(-26deg); } 50% { transform: rotate(26deg); } }
-@keyframes sn-leg-b { 0%, 100% { transform: rotate(26deg); } 50% { transform: rotate(-26deg); } }
-@keyframes sn-dash { to { stroke-dashoffset: -36; } }
-@keyframes sn-hub-pulse { 0% { scale: 1; } 35% { scale: 1.09; } 100% { scale: 1; } }
-.sn-float { animation: sn-float 5.5s ease-in-out var(--fd, 0s) infinite; }
-.sn-bob { animation: sn-bob 0.45s ease-in-out infinite; }
-.sn-leg-a, .sn-leg-b { transform-box: fill-box; transform-origin: 50% 8%; }
-.sn-leg-a { animation: sn-leg-a 0.7s ease-in-out infinite; }
-.sn-leg-b { animation: sn-leg-b 0.7s ease-in-out infinite; }
-.sn-draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.1s var(--ease-soft); }
-.sn-draw[data-on="1"] { stroke-dashoffset: 0; }
-.sn-road-dash { animation: sn-dash 2.2s linear infinite; transition: opacity 0.6s 1.1s; }
-.sn-hub-pulse { animation: sn-hub-pulse 0.6s var(--ease-snap); }
-@media (prefers-reduced-motion: reduce) {
-  .sn-float, .sn-bob, .sn-leg-a, .sn-leg-b, .sn-road-dash, .sn-hub-pulse { animation: none; }
-  .sn-draw { stroke-dashoffset: 0; transition: none; }
-}
-@keyframes sn-spin { to { rotate: 360deg; } }
-.sn-spin { animation: sn-spin 40s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .sn-spin { animation: none; } }
+/* Category mall: a soft glint sweeps across the shop windows now and then. */
+@keyframes sn-glint { 0%, 55% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
+.sn-glint { background-image: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%); background-size: 250% 100%; background-position: 160% 0; animation: sn-glint 9s ease-in-out var(--gd, 0s) infinite; }
+@media (prefers-reduced-motion: reduce) { .sn-glint { animation: none; } }

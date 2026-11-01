@@ -1,7 +1,7 @@
 import { getCategories, getFeatured, getProduct, getProductsBySlugs, getPublicSettings, listProducts } from "@/lib/catalog";
 import { Hero } from "@/components/storefront/home/hero";
 import { Marquee } from "@/components/storefront/home/marquee";
-import { CategoryJourney } from "@/components/storefront/home/category-journey";
+import { CategoryMall } from "@/components/storefront/home/category-mall";
 import { Spotlight } from "@/components/storefront/home/spotlight";
 import { ProductTabs } from "@/components/storefront/home/product-tabs";
 import { Campaign } from "@/components/storefront/home/campaign";
@@ -25,8 +25,8 @@ export default async function HomePage() {
   const hero = heroList[0] ?? featured[0] ?? null;
   const spotlight = featured.find((p) => p.slug !== hero?.slug) ?? null;
   const spotlightDetail = spotlight ? await getProduct(spotlight.slug) : null;
-  // Up to four products per category for the "journey" showcase.
-  const byCategory = Object.fromEntries(await Promise.all(categories.map(async (c) => [c.slug, (await listProducts({ category: c.slug, pageSize: 4 })).items] as const)));
+  // Only the first floor's products ship with the page; the other floors load on demand.
+  const firstProducts = categories[0] ? (await listProducts({ category: categories[0].slug, pageSize: 4 })).items : [];
 
   return (
     <>
@@ -35,7 +35,7 @@ export default async function HomePage() {
 
       <section aria-labelledby="cats" className="mx-auto mt-24 max-w-7xl px-4 sm:px-8">
         <SectionHeading id="cats" eyebrow="Find your lane" title={<>Shop by <span className="text-gradient">category</span></>} bn="ক্যাটাগরি অনুযায়ী কেনাকাটা" />
-        <CategoryJourney categories={categories} products={byCategory} />
+        <CategoryMall categories={categories} initialProducts={firstProducts} />
       </section>
 
       {spotlight && spotlightDetail && (
