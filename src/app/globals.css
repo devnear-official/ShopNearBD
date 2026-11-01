@@ -320,3 +320,8 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-cart-in, .hero-cart-bob, .hero-bag-in, .hero-float, .hero-hop, .hero-wheel, .hero-streaks, .hero-tile, .hero-phone { animation: none; }
 }
+
+/* Category mall: a soft glint sweeps across the shop windows now and then. */
+@keyframes sn-glint { 0%, 55% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
+.sn-glint { background-image: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%); background-size: 250% 100%; background-position: 160% 0; animation: sn-glint 9s ease-in-out var(--gd, 0s) infinite; }
+@media (prefers-reduced-motion: reduce) { .sn-glint { animation: none; } }

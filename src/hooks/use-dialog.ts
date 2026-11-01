@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 /** Focus trap + Escape-to-close + scroll lock + focus restore for modal panels. */
-export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => void) {
+export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => void, modal = true) {
   const ref = useRef<T>(null);
   const close = useRef(onClose);
   useLayoutEffect(() => {
@@ -18,13 +18,14 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
     const first = node?.querySelector<HTMLElement>("[data-autofocus]") ?? focusables()[0];
     first?.focus();
     const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // A non-modal panel (e.g. the desktop chat popover) leaves the page behind it scrollable.
+    if (modal) document.body.style.overflow = "hidden";
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         close.current();
-      } else if (e.key === "Tab") {
+      } else if (e.key === "Tab" && modal) {
         const els = focusables();
         if (!els.length) return;
         const [a, b] = [els[0], els[els.length - 1]];
@@ -43,7 +44,7 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
       document.body.style.overflow = prevOverflow;
       previous?.focus?.();
     };
-  }, [open]);
+  }, [open, modal]);
 
   return ref;
 }

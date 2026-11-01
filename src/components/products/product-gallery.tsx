@@ -9,7 +9,7 @@ import type { ProductImage } from "@/lib/catalog";
 import { useDialog } from "@/hooks/use-dialog";
 
 /**
- * Desktop: a stacked "scroll-through" gallery with a sticky thumbnail rail.
+ * Desktop: a gallery — thumbnail rail beside one large image.
  * Phones: a swipeable snap carousel. Any image opens a full-screen viewer with
  * zoom (click/tap to toggle, drag to pan), arrow keys and swipe.
  */
@@ -23,17 +23,18 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
   }
   const [viewer, setViewer] = useState<number | null>(null);
   const strip = useRef<HTMLDivElement>(null);
-  const stack = useRef<HTMLDivElement>(null);
+  // Each photo's own width/height ratio (from the DB, else measured on load) so its frame fits it exactly, with no empty bars.
+  const [measured, setMeasured] = useState<Record<string, number>>({});
+  const ratioOf = (img: ProductImage) => (img.width && img.height ? img.width / img.height : measured[img.url] ?? 0.8);
+  const measure = (url: string) => (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+    if (w && h) setMeasured((cur) => (cur[url] === w / h ? cur : { ...cur, [url]: w / h }));
+  };
 
   // Variant change → bring its image into view.
   useEffect(() => {
     const s = strip.current;
     if (s) s.scrollTo({ left: s.clientWidth * activeIndex, behavior: "smooth" });
-    const target = stack.current?.children[activeIndex] as HTMLElement | undefined;
-    if (target && window.matchMedia("(min-width: 1024px)").matches) {
-      const top = target.getBoundingClientRect().top + window.scrollY - 110;
-      if (Math.abs(window.scrollY - top) > 40 && target.getBoundingClientRect().top < 0) window.scrollTo({ top, behavior: "smooth" });
-    }
   }, [activeIndex]);
 
   const onStripScroll = () => {
@@ -47,10 +48,10 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
     <>
       {/* Phones / tablets */}
       <div className="relative lg:hidden">
-        <div ref={strip} onScroll={onStripScroll} className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto rounded-[2rem]" aria-roledescription="carousel" aria-label={`${name} images`}>
+        <div ref={strip} onScroll={onStripScroll} className="scrollbar-none flex snap-x snap-mandatory items-start overflow-x-auto rounded-[2rem] bg-cloud" aria-roledescription="carousel" aria-label={`${name} images`}>
           {images.map((img, i) => (
-            <button key={img.url} type="button" onClick={() => setViewer(i)} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-cloud" aria-label={`Open image ${i + 1} of ${images.length} full screen`}>
-              <Image src={img.url} alt={img.alt || name} fill priority={i === 0} sizes="100vw" className="object-cover" />
+            <button key={img.url} type="button" onClick={() => setViewer(i)} className="block w-full shrink-0 snap-center" aria-label={`Open image ${i + 1} of ${images.length} full screen`}>
+              <Image src={img.url} alt={img.alt || name} width={0} height={0} priority={i === 0} sizes="100vw" className="h-auto w-full" />
             </button>
           ))}
         </div>
@@ -59,24 +60,28 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
         </div>
       </div>
 
-      {/* Desktop */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-[4.5rem_1fr]">
-        <div className="sticky top-28 flex h-max flex-col gap-3" role="list" aria-label="Image thumbnails">
+      {/* Desktop: thumbnail rail + one large image; click a thumbnail to switch, click the image to zoom */}
+      <div className="sticky top-28 hidden h-max items-start gap-4 lg:grid lg:grid-cols-[5rem_1fr]">
+        <div className="flex max-h-[calc(100dvh-8rem)] flex-col gap-3 overflow-y-auto pr-1" role="list" aria-label="Image thumbnails">
           {images.map((img, i) => (
-            <button key={img.url} type="button" role="listitem" onClick={() => (stack.current?.children[i] as HTMLElement)?.scrollIntoView({ behavior: "smooth", block: "center" })}
-              className={clsx("relative aspect-[4/5] overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`}>
-              <Image src={img.url} alt="" fill sizes="72px" className="object-cover" />
+            <button key={img.url} type="button" role="listitem" onClick={() => setCurrent(i)}
+              style={{ aspectRatio: ratioOf(img) }} className={clsx("relative w-full shrink-0 overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`} aria-current={i === current}>
+              <Image src={img.url} alt="" fill sizes="80px" className="object-cover" onLoad={measure(img.url)} />
             </button>
           ))}
         </div>
-        <div ref={stack} className="flex flex-col gap-4">
-          {images.map((img, i) => (
-            <m.button key={img.url} type="button" onClick={() => setViewer(i)} onViewportEnter={() => setCurrent(i)} viewport={{ amount: 0.6 }}
-              className={clsx("group relative aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud", i === 0 && "tag-hole")} aria-label={`Open image ${i + 1} full screen`}>
-              <Image src={img.url} alt={img.alt || name} fill priority={i === 0} sizes="(min-width:1280px) 640px, 55vw" className="object-cover transition duration-700 group-hover:scale-[1.03]" />
-              <span className="absolute bottom-4 right-4 grid size-11 place-items-center rounded-full bg-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand className="size-5" /></span>
-            </m.button>
-          ))}
+        {/* The frame takes the photo's exact ratio and is as wide as fits the screen height, so the photo fills it edge to edge. */}
+        <div className="relative mx-auto" style={{ aspectRatio: ratioOf(images[current]), width: `min(100%, calc((100dvh - 8rem) * ${ratioOf(images[current])}))` }}>
+          <button type="button" onClick={() => setViewer(current)} className="group tag-hole absolute inset-0 block cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud" aria-label={`Open image ${current + 1} full screen`}>
+            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} fill priority sizes="(min-width:1280px) 640px, 55vw" className="object-cover" onLoad={measure(images[current].url)} />
+            <span className="absolute bottom-4 right-4 grid size-11 place-items-center rounded-full bg-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand className="size-5" /></span>
+          </button>
+          {images.length > 1 && (
+            <>
+              <button type="button" onClick={() => setCurrent((current - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/85 shadow backdrop-blur hover:bg-white" aria-label="Previous image"><ChevronLeft className="size-5" /></button>
+              <button type="button" onClick={() => setCurrent((current + 1) % images.length)} className="absolute right-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/85 shadow backdrop-blur hover:bg-white" aria-label="Next image"><ChevronRight className="size-5" /></button>
+            </>
+          )}
         </div>
       </div>
 
