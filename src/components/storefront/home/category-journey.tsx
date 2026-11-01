@@ -10,37 +10,59 @@ import { ProductCard } from "@/components/products/product-card";
 import { ButtonLink } from "@/components/ui/button";
 
 /**
- * Category journey: a ShopNear hub in the middle, one road per category, and the
- * roads are never empty — shoppers, cyclists, bikes and vans keep travelling along
- * the real curved paths. Click a category and a cart rides from it back to the hub,
- * then that category's products arrive in the showcase below.
+ * Category journey, set inside a shopping mall: the ShopNear atrium in the middle,
+ * a winding tiled walkway to every category "shop front", and everyday shoppers —
+ * people with bags, a person pushing a trolley, couples, families, friends — strolling
+ * along the real curved paths, in and out of the shops. Click a shop and a loaded
+ * shopping cart rolls back along its walkway to the atrium, then that category's
+ * products arrive in the showcase below.
  *
- * Everything is data-driven: node positions and roads are recomputed from the
- * category list, so any number of categories stays balanced around the hub.
+ * Data-driven: positions and walkways are recomputed from the category list, so any
+ * number of categories stays balanced around the hub.
  */
 
-type Kind = "walker" | "cyclist" | "bike" | "van";
-const KINDS: Kind[] = ["walker", "cyclist", "bike", "van", "walker", "bike", "cyclist"];
-const SPEED: Record<Kind, number> = { walker: 13, cyclist: 9.5, bike: 6.5, van: 5.5 };
-const PALETTE = ["#1677FF", "#FF9F43", "#10B981", "#8B5CF6", "#F43F5E", "#0EA5E9"];
+type Kind = "bag" | "couple" | "cart" | "family" | "friends";
+const KINDS: Kind[] = ["bag", "couple", "cart", "family", "friends", "bag", "cart"];
+const SECONDS: Record<Kind, number> = { bag: 11, couple: 14, cart: 13, family: 16, friends: 13 };
 
-type Geo = { W: number; H: number; cx: number; cy: number; routes: { x: number; y: number; out: string; back: string; flip: 1 | -1 }[] };
+type Pt = [number, number];
+type Deco = { x: number; y: number; kind: "plant" | "lamp" };
+type Geo = { W: number; H: number; cx: number; cy: number; routes: { x: number; y: number; out: string; back: string; flip: 1 | -1; deco: Deco[] }[] };
 
-/** Evenly spaced nodes on an ellipse around the hub, each joined by an S-shaped road. */
 const f = (v: number) => Math.round(v * 100) / 100; // fixed precision so server and browser render identical markup
 
+/** Smooth curve through the points (Catmull-Rom converted to cubic Béziers). */
+function smooth(pts: Pt[]) {
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] ?? p2;
+    d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${p2[0]} ${p2[1]}`;
+  }
+  return d;
+}
+
+/** Evenly spaced shops on an ellipse around the atrium, each joined by a meandering walkway. */
 function layout(n: number, compact: boolean): Geo {
   const W = compact ? 420 : 1200, H = compact ? 600 : 640;
   const cx = W / 2, cy = H / 2;
-  const rx = W * (compact ? 0.335 : 0.37), ry = H * (compact ? 0.36 : 0.335);
+  const rx = W * (compact ? 0.34 : 0.385), ry = H * (compact ? 0.365 : 0.345);
   const routes = Array.from({ length: n }, (_, i) => {
     const a = ((-90 + 180 / n + (i * 360) / n) * Math.PI) / 180;
     const x = f(cx + rx * Math.cos(a)), y = f(cy + ry * Math.sin(a));
     const dx = x - cx, dy = y - cy, len = Math.hypot(dx, dy) || 1;
-    const px = -dy / len, py = dx / len, bend = (i % 2 ? 1 : -1) * len * 0.13;
-    const c1 = `${f(cx + dx * 0.33 + px * bend)} ${f(cy + dy * 0.33 + py * bend)}`;
-    const c2 = `${f(cx + dx * 0.66 - px * bend)} ${f(cy + dy * 0.66 - py * bend)}`;
-    return { x, y, out: `M${cx} ${cy} C${c1} ${c2} ${x} ${y}`, back: `M${x} ${y} C${c2} ${c1} ${cx} ${cy}`, flip: (dx < 0 ? -1 : 1) as 1 | -1 };
+    const px = -dy / len, py = dx / len;
+    const amp = len * (compact ? 0.05 : 0.055) * (i % 2 ? 1 : -1);
+    // three waypoints that swing left, right, left again: a path people would really walk
+    const wiggle = [1.0, -1.15, 0.8];
+    const ts = [0.24, 0.5, 0.74];
+    const mid: Pt[] = ts.map((t, k) => [f(cx + dx * t + px * amp * wiggle[k]), f(cy + dy * t + py * amp * wiggle[k])]);
+    const pts: Pt[] = [[cx, cy], ...mid, [x, y]];
+    const side = (i % 2 ? 1 : -1) * 1;
+    const deco: Deco[] = [
+      { x: f(mid[0][0] - px * 30 * side), y: f(mid[0][1] - py * 30 * side), kind: "plant" },
+      { x: f(mid[2][0] + px * 30 * side), y: f(mid[2][1] + py * 30 * side), kind: "lamp" },
+    ];
+    return { x, y, out: smooth(pts), back: smooth([...pts].reverse()), flip: (dx < 0 ? -1 : 1) as 1 | -1, deco };
   });
   return { W, H, cx, cy, routes };
 }
@@ -60,7 +82,7 @@ export function CategoryJourney({ categories, products }: { categories: Category
   const geo = layout(categories.length, compact);
   const [hover, setHover] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState<string | null>(null); // the showcase appears once the cart has reached the hub
+  const [revealed, setRevealed] = useState<string | null>(null); // the showcase appears once the cart has reached the atrium
   const [shown, setShown] = useState(false);
   const [trip, setTrip] = useState<{ slug: string; n: number } | null>(null);
   const [pulse, setPulse] = useState(0);
@@ -86,11 +108,11 @@ export function CategoryJourney({ categories, products }: { categories: Category
     timers.current = [];
     setSelected(slug);
     setTrip((t) => ({ slug, n: (t?.n ?? 0) + 1 }));
-    if (!reduced) later(() => setPulse((p) => p + 1), 1650);
+    if (!reduced) later(() => setPulse((p) => p + 1), 1900);
     later(() => {
       setRevealed(slug);
       requestAnimationFrame(() => panel.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" }));
-    }, reduced ? 0 : 1750);
+    }, reduced ? 0 : 2000);
   }, [reduced]);
 
   // Start the one-shot cart ride whenever a (new) category is chosen.
@@ -105,14 +127,21 @@ export function CategoryJourney({ categories, products }: { categories: Category
   const current = categories.find((c) => c.slug === revealed) ?? null;
   const list = current ? products[current.slug] ?? [] : [];
   const tripIndex = trip ? categories.findIndex((c) => c.slug === trip.slug) : -1;
+  const lane = compact ? 17 : 26; // walkway width
 
   return (
     <div>
       <div ref={root} className="relative mx-auto w-full max-w-[75rem]" style={{ aspectRatio: `${geo.W} / ${geo.H}` }}>
-        {/* soft backdrop */}
-        <span aria-hidden className="pointer-events-none absolute inset-x-[4%] inset-y-[6%] rounded-[3rem] bg-gradient-to-b from-[#eaf2ff] via-[#f3f8ff] to-[#e6f0ff]" />
-        <span aria-hidden className="pointer-events-none absolute left-[8%] top-[12%] size-24 rounded-full bg-sky/20 blur-2xl" />
-        <span aria-hidden className="pointer-events-none absolute bottom-[10%] right-[8%] size-32 rounded-full bg-electric/15 blur-3xl" />
+        {/* mall interior: tiled floor, skylight glow, ceiling lights, plants */}
+        <span aria-hidden className="pointer-events-none absolute inset-x-[3%] inset-y-[5%] overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#e3eeff] via-[#f4f8ff] to-[#e9f1ff] ring-1 ring-electric/10 sm:rounded-[3.5rem]">
+          <span className="absolute inset-0 opacity-80 [background-image:linear-gradient(rgba(22,119,255,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(22,119,255,.07)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_95%)]" />
+          <span className="absolute -top-16 left-1/2 h-48 w-[70%] -translate-x-1/2 rounded-full bg-white/90 blur-3xl" />
+          <span className="absolute left-[18%] top-[5%] h-1.5 w-[12%] rounded-full bg-white shadow-[0_0_28px_8px_rgba(255,255,255,.95)]" />
+          <span className="absolute right-[18%] top-[5%] h-1.5 w-[12%] rounded-full bg-white shadow-[0_0_28px_8px_rgba(255,255,255,.95)]" />
+          <span className="absolute left-1/2 top-[3%] h-1.5 w-[10%] -translate-x-1/2 rounded-full bg-white shadow-[0_0_28px_8px_rgba(255,255,255,.95)]" />
+        </span>
+        <CornerPlant className="pointer-events-none absolute bottom-[5%] left-[3.5%] z-[5] w-[8%] max-w-24" />
+        <CornerPlant className="pointer-events-none absolute bottom-[5%] right-[3.5%] z-[5] w-[8%] max-w-24 -scale-x-100" />
 
         <svg viewBox={`0 0 ${geo.W} ${geo.H}`} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
           <defs>
@@ -127,80 +156,83 @@ export function CategoryJourney({ categories, products }: { categories: Category
             ))}
           </defs>
 
-          {/* roads */}
+          {/* tiled walkways */}
           {geo.routes.map((r, i) => {
             const slug = categories[i].slug;
             const on = focus === slug;
             const dim = focus !== null && !on;
             return (
-              <g key={slug} className="transition-opacity duration-500" opacity={dim ? 0.35 : 1}>
-                <path d={r.out} fill="none" stroke="#cfe0fb" strokeWidth={compact ? 15 : 22} strokeLinecap="round" pathLength={1} className="sn-draw" data-on={shown ? "1" : "0"} style={{ transitionDelay: `${i * 120}ms` }} />
-                <path d={r.out} fill="none" stroke="#fff" strokeOpacity=".9" strokeWidth={compact ? 1.6 : 2.2} strokeDasharray="7 11" strokeLinecap="round" className="sn-road-dash" opacity={shown ? 1 : 0} />
-                <path d={r.out} fill="none" stroke={`url(#${uid}-glow)`} strokeWidth={compact ? 15 : 22} strokeLinecap="round" opacity={on ? 0.9 : 0} className="transition-opacity duration-300" style={{ filter: on ? "drop-shadow(0 0 8px rgba(22,119,255,.65))" : undefined }} />
+              <g key={slug} className="transition-opacity duration-500" opacity={dim ? 0.4 : 1}>
+                <path d={r.out} fill="none" stroke="#bcd3f5" strokeWidth={lane + 5} strokeLinecap="round" pathLength={1} className="sn-draw" data-on={shown ? "1" : "0"} style={{ transitionDelay: `${i * 120}ms` }} />
+                <path d={r.out} fill="none" stroke="#f6faff" strokeWidth={lane} strokeLinecap="round" pathLength={1} className="sn-draw" data-on={shown ? "1" : "0"} style={{ transitionDelay: `${i * 120 + 80}ms` }} />
+                <path d={r.out} fill="none" stroke="#cfe0fb" strokeWidth={lane} strokeDasharray="1.2 15" className="transition-opacity duration-700" opacity={shown ? 0.9 : 0} style={{ transitionDelay: "1.1s" }} />
+                <path d={r.out} fill="none" stroke={`url(#${uid}-glow)`} strokeWidth={lane} strokeLinecap="round" opacity={on ? 0.55 : 0} className="transition-opacity duration-300" style={{ filter: on ? "drop-shadow(0 0 9px rgba(22,119,255,.7))" : undefined }} />
               </g>
             );
           })}
 
-          {/* people and vehicles travelling the roads, both ways, staggered, never all at once */}
+          {/* greenery and lamps beside the walkways */}
+          {geo.routes.map((r, i) => (
+            <g key={i} opacity={shown ? 1 : 0} className="transition-opacity duration-700" style={{ transitionDelay: "1.2s" }}>
+              {r.deco.map((d, k) => (d.kind === "plant" ? <Plant key={k} x={d.x} y={d.y} s={compact ? 0.7 : 1} /> : <Lamp key={k} x={d.x} y={d.y} s={compact ? 0.7 : 1} />))}
+            </g>
+          ))}
+
+          {/* shoppers strolling both ways, staggered, never all at once */}
           {shown && !reduced && geo.routes.map((r, i) => {
             const slug = categories[i].slug;
             const dim = focus !== null && focus !== slug;
             const riders = compact ? 1 : 2;
+            const sc = compact ? 1.05 : 1.5;
             return (
               <g key={slug} opacity={dim ? 0.25 : 1} className="transition-opacity duration-500">
                 {Array.from({ length: riders }, (_, k) => {
                   const kind = KINDS[(i + k * 3) % KINDS.length];
-                  const dur = SPEED[kind] / 0.62;
-                  const begin = 1.4 + ((i * 1.9 + k * 4.3) % 7);
+                  const dur = SECONDS[kind] / 0.64;
+                  const begin = 1.4 + ((i * 1.9 + k * 4.7) % 8);
                   const inbound = k === 1;
                   return (
-                    <g key={k}>
-                      <g opacity="0">
-                        <animateMotion dur={`${dur}s`} begin={`${begin}s`} repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1" keyTimes="0;0.62;1">
-                          <mpath href={`#${uid}-${inbound ? "b" : "o"}${i}`} />
-                        </animateMotion>
-                        <animate attributeName="opacity" dur={`${dur}s`} begin={`${begin}s`} repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.04;0.56;0.62;1" />
-                        <g transform={`scale(${(inbound ? -r.flip : r.flip) * (compact ? 0.8 : 1)} ${compact ? 0.8 : 1})`}><Traveler kind={kind} color={PALETTE[(i + k) % PALETTE.length]} /></g>
-                      </g>
+                    <g key={k} opacity="0">
+                      <animateMotion dur={`${dur}s`} begin={`${begin}s`} repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1" keyTimes="0;0.64;1">
+                        <mpath href={`#${uid}-${inbound ? "b" : "o"}${i}`} />
+                      </animateMotion>
+                      <animate attributeName="opacity" dur={`${dur}s`} begin={`${begin}s`} repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.04;0.58;0.64;1" />
+                      <g transform={`scale(${(inbound ? -r.flip : r.flip) * sc} ${sc})`}><Shoppers kind={kind} seed={i + k} /></g>
                     </g>
                   );
                 })}
-                {/* glowing parcel of light heading to the category */}
-                <circle r={compact ? 2.4 : 3.2} fill="#72B6FF" opacity="0" style={{ filter: "drop-shadow(0 0 5px #1677FF)" }}>
-                  <animateMotion dur={`${5 + (i % 3)}s`} begin={`${0.8 + i * 0.6}s`} repeatCount="indefinite" calcMode="linear"><mpath href={`#${uid}-o${i}`} /></animateMotion>
-                  <animate attributeName="opacity" dur={`${5 + (i % 3)}s`} begin={`${0.8 + i * 0.6}s`} repeatCount="indefinite" values="0;1;1;0" keyTimes="0;0.1;0.85;1" />
-                </circle>
               </g>
             );
           })}
 
-          {/* the cart that rides from the clicked category to ShopNear */}
+          {/* the loaded shopping cart that rolls from the clicked shop back to the atrium */}
           {trip && tripIndex >= 0 && !reduced && (
             <g key={trip.n} opacity="0">
-              <animateMotion ref={cartAnim} dur="1.7s" begin="indefinite" fill="freeze" calcMode="spline" keyTimes="0;1" keyPoints="0;1" keySplines="0.45 0 0.3 1">
+              <animateMotion ref={cartAnim} dur="1.9s" begin="indefinite" fill="freeze" calcMode="spline" keyTimes="0;1" keyPoints="0;1" keySplines="0.45 0 0.3 1">
                 <mpath href={`#${uid}-b${tripIndex}`} />
               </animateMotion>
-              <animate ref={cartFade} attributeName="opacity" dur="1.7s" begin="indefinite" fill="freeze" values="0;1;1;1;0" keyTimes="0;0.08;0.5;0.92;1" />
-              <g transform={`scale(${geo.routes[tripIndex].flip * -1 * (compact ? 1.1 : 1.45)} ${compact ? 1.1 : 1.45})`}><CartRider color={categories[tripIndex].accent ?? "#1677FF"} /></g>
+              <animate ref={cartFade} attributeName="opacity" dur="1.9s" begin="indefinite" fill="freeze" values="0;1;1;1;0" keyTimes="0;0.08;0.5;0.92;1" />
+              <g transform={`scale(${geo.routes[tripIndex].flip * -1 * (compact ? 1.2 : 1.6)} ${compact ? 1.2 : 1.6})`}><LoadedCart color={categories[tripIndex].accent ?? "#1677FF"} /></g>
             </g>
           )}
         </svg>
 
-        {/* hub */}
+        {/* atrium hub */}
         <div key={pulse} className={clsx("absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2", compact ? "w-[44%]" : "w-[22%]", pulse > 0 && "sn-hub-pulse")}>
           <div className="sn-float relative aspect-square">
-            <span aria-hidden className="absolute -inset-[12%] rounded-full bg-electric/25 blur-2xl" />
+            <span aria-hidden className="absolute -inset-[16%] rounded-full bg-electric/20 blur-2xl" />
+            <span aria-hidden className="sn-spin absolute -inset-[13%] rounded-full border-2 border-dashed border-electric/30" />
             <span aria-hidden className="absolute -inset-[7%] rounded-full bg-gradient-to-b from-[#8ec3ff] to-electric/70 shadow-[0_18px_40px_-12px_rgba(22,119,255,.55)]" />
             <span aria-hidden className="absolute -inset-[2%] rounded-full bg-gradient-to-b from-white to-[#dcebff] ring-2 ring-white/80" />
             <div className="absolute inset-[6%] flex flex-col items-center justify-center rounded-full bg-gradient-to-b from-white to-[#f1f7ff] text-center shadow-inner">
               <Image src="/brand/mark-512.png" alt="" width={96} height={96} className={clsx("object-contain", compact ? "size-9" : "size-[34%]")} />
               <span className={clsx("font-display font-bold leading-none text-ink", compact ? "mt-0.5 text-[0.95rem]" : "mt-1 text-[clamp(1rem,2.1vw,1.7rem)]")}>ShopNear</span>
-              <span className={clsx("rounded-full bg-electric/10 font-bold uppercase tracking-[0.18em] text-electric", compact ? "mt-1 px-2 py-0.5 text-[0.5rem]" : "mt-1.5 px-3 py-1 text-[clamp(0.5rem,0.85vw,0.7rem)]")}>Categories</span>
+              <span className={clsx("rounded-full bg-electric/10 font-bold uppercase tracking-[0.18em] text-electric", compact ? "mt-1 px-2 py-0.5 text-[0.5rem]" : "mt-1.5 px-3 py-1 text-[clamp(0.5rem,0.85vw,0.7rem)]")}>Mall · Categories</span>
             </div>
           </div>
         </div>
 
-        {/* category nodes */}
+        {/* shop fronts */}
         {categories.map((c, i) => {
           const r = geo.routes[i];
           const on = focus === c.slug;
@@ -208,21 +240,29 @@ export function CategoryJourney({ categories, products }: { categories: Category
           const pic = c.cover ?? c.image_url;
           const accent = c.accent ?? "#1677FF";
           return (
-            <div key={c.slug} className={clsx("pop-in absolute z-20 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-500", compact ? "w-[31%]" : "w-[17%]", dim && "opacity-45")}
+            <div key={c.slug} className={clsx("pop-in absolute z-20 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-500", compact ? "w-[30%]" : "w-[14%]", dim && "opacity-45")}
               style={{ left: `${f((r.x / geo.W) * 100)}%`, top: `${f((r.y / geo.H) * 100)}%`, ["--d" as string]: `${300 + i * 90}ms` }}>
               <button type="button" onClick={() => choose(c.slug)} onPointerEnter={() => setHover(c.slug)} onPointerLeave={() => setHover(null)} onFocus={() => setHover(c.slug)} onBlur={() => setHover(null)}
                 aria-pressed={selected === c.slug} aria-label={`${c.name}, ${c.product_count} products. Show products`}
-                className={clsx("sn-float group relative flex w-full flex-col items-center outline-none transition-transform duration-300 ease-[var(--ease-snap)]", on ? "-translate-y-1.5 scale-105" : "hover:-translate-y-1.5 hover:scale-105", "focus-visible:-translate-y-1.5")}
-                style={{ ["--fd" as string]: `${i * -0.7}s` }}>
-                <span aria-hidden className="absolute inset-x-[4%] bottom-[-6%] top-[40%] rounded-[50%] bg-electric/15 blur-[2px] ring-1 ring-electric/15" />
-                <span className={clsx("relative z-10 -mb-[18%] block overflow-hidden rounded-2xl bg-white shadow-[0_14px_28px_-12px_rgba(22,119,255,.5)] ring-2 transition", "aspect-square w-[52%]", on ? "ring-electric" : "ring-white")} style={{ background: `${accent}22` }}>
-                  {pic ? <Image src={pic} alt="" fill sizes="(min-width:768px) 9vw, 16vw" className="object-cover" /> : <ShoppingBag className="absolute inset-0 m-auto size-1/2" style={{ color: accent }} />}
+                className={clsx("sn-float group relative block w-full text-left outline-none transition-transform duration-300 ease-[var(--ease-snap)]", on ? "-translate-y-1.5 scale-105" : "hover:-translate-y-1.5 hover:scale-105", "focus-visible:-translate-y-1.5")}
+                style={{ ["--fd" as string]: `${i * -0.7}s`, ["--c" as string]: accent }}>
+                <span aria-hidden className="absolute inset-x-[6%] -bottom-[7%] h-[16%] rounded-[50%] bg-ink/15 blur-md" />
+                {/* striped shop awning with scalloped edge */}
+                <span aria-hidden className={clsx("relative z-10 block rounded-t-[0.9rem] shadow-[0_6px_10px_-6px_rgba(11,21,48,.5)]", compact ? "h-3" : "h-4")}
+                  style={{ backgroundImage: `repeating-linear-gradient(90deg, ${accent} 0 ${compact ? 10 : 14}px, #fff ${compact ? 10 : 14}px ${compact ? 20 : 28}px)` }} />
+                <span aria-hidden className="relative z-10 -mt-px block h-2" style={{ backgroundImage: `radial-gradient(circle at ${compact ? 5 : 7}px 0, ${accent} ${compact ? 5 : 7}px, transparent ${compact ? 5.5 : 7.5}px), radial-gradient(circle at ${compact ? 15 : 21}px 0, #fff ${compact ? 5 : 7}px, transparent ${compact ? 5.5 : 7.5}px)`, backgroundSize: `${compact ? 20 : 28}px 100%`, backgroundRepeat: "repeat-x", filter: "drop-shadow(0 2px 1px rgba(11,21,48,.12))" }} />
+                {/* shop window */}
+                <span className={clsx("relative -mt-2 block overflow-hidden rounded-b-[1.1rem] bg-white shadow-[0_16px_30px_-14px_rgba(22,119,255,.55)] ring-1 transition group-focus-visible:ring-2 group-focus-visible:ring-electric", compact ? "px-1.5 pb-1.5 pt-3" : "px-2 pb-2 pt-3.5", on ? "ring-electric" : "ring-electric/10")}>
+                  <span className="relative block aspect-[16/11] overflow-hidden rounded-xl" style={{ background: `${accent}1f` }}>
+                    {pic ? <Image src={pic} alt="" fill sizes="(min-width:768px) 10vw, 22vw" className="object-cover transition-transform duration-700 group-hover:scale-110" /> : <ShoppingBag className="absolute inset-0 m-auto size-1/2" style={{ color: accent }} />}
+                    <span aria-hidden className="absolute inset-0 bg-gradient-to-tr from-white/25 via-transparent to-transparent" />
+                  </span>
+                  <span className={clsx("mt-1.5 flex items-center justify-between gap-1", compact ? "" : "mt-2")}>
+                    <span className={clsx("truncate font-bold text-ink", compact ? "text-[0.68rem]" : "text-[clamp(0.75rem,1vw,0.92rem)]")}>{c.name}</span>
+                    <span className={clsx("grid shrink-0 place-items-center rounded-full bg-electric text-white transition-transform duration-300 group-hover:rotate-45", compact ? "size-4" : "size-6")}><ArrowUpRight className={compact ? "size-2.5" : "size-3.5"} /></span>
+                  </span>
                 </span>
-                <span className={clsx("relative z-20 flex w-full items-center justify-between gap-1 rounded-full bg-white shadow-[0_12px_26px_-10px_rgba(22,119,255,.45)] ring-1 transition group-focus-visible:ring-2 group-focus-visible:ring-electric", compact ? "px-2 pb-1.5 pt-[0.9rem]" : "px-3.5 pb-2 pt-[1.35rem]", on ? "ring-electric" : "ring-electric/10")}>
-                  <span className={clsx("truncate font-bold text-ink", compact ? "text-[0.7rem]" : "text-[clamp(0.8rem,1.15vw,1rem)]")}>{c.name}</span>
-                  <span className={clsx("grid shrink-0 place-items-center rounded-full bg-electric text-white transition-transform duration-300 group-hover:rotate-45", compact ? "size-4" : "size-6")}><ArrowUpRight className={compact ? "size-2.5" : "size-3.5"} /></span>
-                </span>
-                <span className={clsx("pointer-events-none absolute -bottom-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[0.7rem] font-semibold text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100", !compact && "sm:block")}>Explore category</span>
+                <span className={clsx("pointer-events-none absolute -bottom-9 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[0.7rem] font-semibold text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100", !compact && "sm:block")}>Step inside</span>
               </button>
             </div>
           );
@@ -234,7 +274,7 @@ export function CategoryJourney({ categories, products }: { categories: Category
         <AnimatePresence mode="wait">
           {current && (
             <m.section key={current.slug} aria-label={`${current.name} products`}
-              initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: "spring", stiffness: 220, damping: 28, }}
+              initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: "spring", stiffness: 220, damping: 28 }}
               className="relative mx-auto mt-6 max-w-[75rem] rounded-[2rem] bg-white/80 p-4 shadow-[0_30px_60px_-30px_rgba(22,119,255,.4)] ring-1 ring-electric/10 backdrop-blur sm:rounded-[2.5rem] sm:p-8">
               <span aria-hidden className="absolute -top-3 left-1/2 size-6 -translate-x-1/2 rotate-45 rounded-sm bg-white/80 ring-1 ring-electric/10" />
               <header className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -264,83 +304,145 @@ export function CategoryJourney({ categories, products }: { categories: Category
   );
 }
 
-/* ───────── tiny SVG travellers. Drawn facing right, feet/wheels on y = 0. ───────── */
+/* ───────── mall scenery ───────── */
 
-function Traveler({ kind, color }: { kind: Kind; color: string }) {
-  if (kind === "walker") return <Walker color={color} />;
-  if (kind === "cyclist") return <Cyclist color={color} />;
-  if (kind === "bike") return <Bike color={color} />;
-  return <Van color={color} />;
+function Plant({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <ellipse cx="0" cy="2" rx="9" ry="3" fill="#0b1530" opacity=".12" />
+      <path d="M-6 -9 H6 L4.6 1 H-4.6 Z" fill="#fff" stroke="#bcd3f5" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M0 -9 C-9 -13 -9 -23 -3 -26 C-2 -19 -1 -14 0 -9 Z" fill="#22b573" />
+      <path d="M0 -9 C9 -13 9 -23 3 -26 C2 -19 1 -14 0 -9 Z" fill="#17935c" />
+      <path d="M0 -9 C-2 -17 2 -24 0 -30 C4 -24 3 -15 0 -9 Z" fill="#34d399" />
+    </g>
+  );
 }
 
-function Walker({ color }: { color: string }) {
+function Lamp({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   return (
-    <g transform="translate(0 -2)">
-      <g className="sn-bob">
-        <rect x="-1.7" y="-9" width="3.4" height="9.5" rx="1.7" fill="#10264A" className="sn-leg-a" />
-        <rect x="-1.7" y="-9" width="3.4" height="9.5" rx="1.7" fill="#2b4a82" className="sn-leg-b" />
-        <rect x="-4.2" y="-20" width="8.4" height="12.5" rx="4" fill={color} />
-        <circle cx="0.4" cy="-24.2" r="4" fill="#f3c9a0" />
-        <path d="M-3.6 -25.5a4 4 0 0 1 8 -0.8v1.4h-8z" fill="#10264A" />
-        <rect x="3.4" y="-14" width="6" height="7" rx="1.2" fill="#FF9F43" />
-        <path d="M4.6 -14v-2.4a1.8 1.8 0 0 1 3.6 0V-14" fill="none" stroke="#10264A" strokeWidth=".9" />
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <circle cx="0" cy="-32" r="13" fill="#fff6d6" opacity=".6" />
+      <rect x="-1" y="-30" width="2" height="31" rx="1" fill="#8d97b0" />
+      <ellipse cx="0" cy="1" rx="5" ry="1.8" fill="#8d97b0" />
+      <circle cx="0" cy="-32" r="4.6" fill="#fff3bf" stroke="#ffd36b" strokeWidth="1" />
+    </g>
+  );
+}
+
+function CornerPlant({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className={className} aria-hidden>
+      <ellipse cx="40" cy="104" rx="26" ry="5" fill="#0b1530" opacity=".1" />
+      <path d="M18 66 H62 L56 104 H24 Z" fill="#fff" stroke="#bcd3f5" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M40 66 C10 58 6 28 22 12 C30 32 36 50 40 66 Z" fill="#22b573" />
+      <path d="M40 66 C70 58 74 28 58 12 C50 32 44 50 40 66 Z" fill="#17935c" />
+      <path d="M40 66 C30 44 44 24 40 2 C56 24 52 50 40 66 Z" fill="#34d399" />
+    </svg>
+  );
+}
+
+/* ───────── people. Drawn facing right, feet on y = 0, ~30 units tall. ───────── */
+
+type PersonProps = { x?: number; s?: number; top: string; bottom: string; skin?: string; hair?: string; dress?: boolean; long?: boolean; bag?: string; delay?: number };
+
+function Person({ x = 0, s = 1, top, bottom, skin = "#f1c7a1", hair = "#1b2440", dress, long, bag, delay = 0 }: PersonProps) {
+  const d = { animationDelay: `${delay}s` };
+  return (
+    <g transform={`translate(${x} 0) scale(${s})`}>
+      <g className="sn-bob" style={d}>
+        <rect x="-1.9" y="-10" width="3.8" height="10.4" rx="1.9" fill={bottom} className="sn-leg-a" style={d} />
+        <rect x="-1.9" y="-10" width="3.8" height="10.4" rx="1.9" fill={bottom} opacity=".78" className="sn-leg-b" style={d} />
+        {long && <rect x="-4.6" y="-28.5" width="3.6" height="10" rx="1.8" fill={hair} />}
+        {dress ? <path d="M-3.6 -22 H3.6 L6 -9 H-6 Z" fill={top} /> : <rect x="-4.3" y="-22" width="8.6" height="13" rx="4" fill={top} />}
+        <circle cx="0.4" cy="-26" r="4.2" fill={skin} />
+        <path d="M-3.9 -26.4a4.3 4.3 0 0 1 8.6 -0.4c0 .9 -.6 1.6 -1.4 1.4c-1.6 -1 -4.4 -1.6 -7.2 -1z" fill={hair} />
+        {bag && (
+          <g transform="translate(3.4 -15)">
+            <path d="M1.5 0V-2.6a2.1 2.1 0 0 1 4.2 0V0" fill="none" stroke="#10264A" strokeWidth=".9" />
+            <rect x="0" y="0" width="7.2" height="9" rx="1.4" fill={bag} />
+            <rect x="0" y="3" width="7.2" height="1.4" fill="#fff" opacity=".55" />
+          </g>
+        )}
       </g>
     </g>
   );
 }
 
-function Cyclist({ color }: { color: string }) {
+const hands = (d: string) => <path d={d} fill="none" stroke="#f1c7a1" strokeWidth="1.9" strokeLinecap="round" />;
+
+function Shoppers({ kind, seed }: { kind: Kind; seed: number }) {
+  const v = seed % 3;
+  if (kind === "bag") {
+    return (
+      <>
+        <Person x={-5} top={["#1677FF", "#f43f5e", "#10b981"][v]} bottom="#26324f" bag="#FF9F43" />
+        {v === 1 && <Person x={11} s={0.95} top="#8b5cf6" bottom="#26324f" dress long bag="#22b8cf" delay={0.35} />}
+      </>
+    );
+  }
+  if (kind === "couple") {
+    return (
+      <>
+        <Person x={-9} top="#1677FF" bottom="#1d2a49" delay={0.2} />
+        <Person x={9} top="#f472b6" bottom="#f472b6" dress long bag="#FF9F43" delay={0.5} s={0.96} />
+        {hands("M-5 -15 Q0 -11.5 5.5 -15")}
+      </>
+    );
+  }
+  if (kind === "cart") {
+    return (
+      <>
+        <Person x={-9} top={["#10b981", "#8b5cf6", "#f43f5e"][v]} bottom="#26324f" long={v === 1} dress={v === 1} />
+        {hands("M-5 -16 L5.5 -21")}
+        <Cart x={13} />
+      </>
+    );
+  }
+  if (kind === "family") {
+    return (
+      <>
+        <Person x={-17} top="#26324f" bottom="#3b4a6b" bag="#10b981" delay={0.1} />
+        <Person x={0} s={0.6} top="#ffb020" bottom="#1677FF" delay={0.4} hair="#3a2a1e" />
+        <Person x={17} top="#14b8a6" bottom="#14b8a6" dress long bag="#f472b6" delay={0.7} s={0.97} />
+        {hands("M-13 -15 Q-8 -12 -3.5 -9.5")}
+        {hands("M3.5 -9.5 Q9 -12 13 -15")}
+      </>
+    );
+  }
   return (
-    <g className="sn-bob">
-      <circle cx="-10" cy="-6.5" r="6.5" fill="none" stroke="#10264A" strokeWidth="1.7" />
-      <circle cx="10" cy="-6.5" r="6.5" fill="none" stroke="#10264A" strokeWidth="1.7" />
-      <path d="M-10 -6.5 L-2 -6.5 L3 -15 L8.5 -15 M-2 -6.5 L-5 -15 M10 -6.5 L7.5 -15.5" fill="none" stroke="#1677FF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="-6.5" y="-27" width="7.5" height="12" rx="3.5" fill={color} transform="rotate(14 -3 -21)" />
-      <path d="M-1 -17 L4 -11 L1 -6.5" fill="none" stroke="#10264A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="1.6" cy="-30" r="3.8" fill="#f3c9a0" />
-      <path d="M-2 -31.2a3.9 3.9 0 0 1 7.6 -0.6v1.3h-7.6z" fill="#10264A" />
+    <>
+      <Person x={-9} top="#8b5cf6" bottom="#8b5cf6" dress long bag="#FF9F43" delay={0.2} />
+      <Person x={9} top="#22b8cf" bottom="#26324f" long bag="#f43f5e" delay={0.55} />
+    </>
+  );
+}
+
+/** A trolley with the shopping in it. */
+function Cart({ x = 0 }: { x?: number }) {
+  return (
+    <g transform={`translate(${x} 0)`} className="sn-bob">
+      <rect x="-5" y="-30" width="6.4" height="5.6" rx="1" fill="#FF9F43" />
+      <rect x="1.8" y="-29" width="5.6" height="4.6" rx="1" fill="#1677FF" />
+      <circle cx="-1.6" cy="-32" r="2.4" fill="#ef4444" />
+      <path d="M-9 -24 H10 L7.2 -10.5 H-6 Z" fill="#eef5ff" stroke="#10264A" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M-4.6 -24 L-3.8 -10.5 M0.5 -24 V-10.5 M5.4 -24 L4.6 -10.5 M-8 -17.5 H8.8" stroke="#10264A" strokeWidth=".7" opacity=".4" />
+      <path d="M-9 -24 L-11.6 -27.5 H-14.5" stroke="#10264A" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M-5.6 -10.5 L-5 -6 M6.2 -10.5 L6.2 -6" stroke="#10264A" strokeWidth="1.2" />
+      <circle cx="-4.4" cy="-3.2" r="2.8" fill="#10264A" /><circle cx="6.4" cy="-3.2" r="2.8" fill="#10264A" />
     </g>
   );
 }
 
-function Bike({ color }: { color: string }) {
+/** The loaded cart that rolls back to the atrium when a shop is chosen. */
+function LoadedCart({ color }: { color: string }) {
   return (
     <g className="sn-bob">
-      <circle cx="-12" cy="-6" r="6" fill="#10264A" /><circle cx="-12" cy="-6" r="2.4" fill="#cfe0fb" />
-      <circle cx="12" cy="-6" r="6" fill="#10264A" /><circle cx="12" cy="-6" r="2.4" fill="#cfe0fb" />
-      <path d="M-13 -8 H4 L10 -16 L14 -16 L11 -8 Z" fill={color} />
-      <rect x="-9" y="-13" width="12" height="4" rx="2" fill="#10264A" />
-      <rect x="-5" y="-27" width="8.5" height="13" rx="4" fill="#10264A" transform="rotate(10 -1 -20)" />
-      <path d="M2 -21 L9 -17" stroke="#10264A" strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="0.5" cy="-30.5" r="4" fill="#f3c9a0" />
-      <path d="M-3.6 -30.6a4.2 4.2 0 0 1 8.2 0v1.2h-8.2z" fill="#FF9F43" />
-    </g>
-  );
-}
-
-function Van({ color }: { color: string }) {
-  return (
-    <g className="sn-bob">
-      <rect x="-19" y="-21" width="24" height="16" rx="3" fill={color} />
-      <path d="M5 -21 H12 L19 -13 V-5 H5 Z" fill="#fff" stroke="#10264A" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M7.5 -18.5 H11.5 L15.5 -13.5 H7.5 Z" fill="#9fd0ff" />
-      <rect x="-15" y="-16" width="10" height="2.2" rx="1.1" fill="#fff" opacity=".85" />
-      <rect x="-15" y="-11.5" width="6" height="2.2" rx="1.1" fill="#fff" opacity=".6" />
-      <circle cx="-10" cy="-4.5" r="4.5" fill="#10264A" /><circle cx="-10" cy="-4.5" r="1.7" fill="#cfe0fb" />
-      <circle cx="11" cy="-4.5" r="4.5" fill="#10264A" /><circle cx="11" cy="-4.5" r="1.7" fill="#cfe0fb" />
-    </g>
-  );
-}
-
-/** The delivery cart that rushes back to the hub when a category is picked. */
-function CartRider({ color }: { color: string }) {
-  return (
-    <g className="sn-bob">
-      <path d="M-26 -18 h9 M-30 -12 h13 M-26 -6 h9" stroke="#72B6FF" strokeWidth="2" strokeLinecap="round" opacity=".8" />
-      <rect x="-12" y="-27" width="9" height="8" rx="1.5" fill="#FF9F43" />
-      <rect x="-1" y="-30" width="8" height="11" rx="1.5" fill={color} />
-      <path d="M-15 -34 h5 l3 22 h19 l3.5 -15 h-24" fill="none" stroke="#10264A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="-3" cy="-6" r="3.2" fill="#10264A" /><circle cx="14" cy="-6" r="3.2" fill="#10264A" />
+      <path d="M-24 -20 h9 M-28 -14 h13 M-24 -8 h9" stroke="#72B6FF" strokeWidth="2" strokeLinecap="round" opacity=".85" />
+      <rect x="-10" y="-31" width="9" height="8" rx="1.5" fill="#FF9F43" />
+      <rect x="0" y="-34" width="8.5" height="11" rx="1.5" fill={color} />
+      <circle cx="12" cy="-27" r="3.2" fill="#ef4444" />
+      <path d="M-15 -37 h5 l3 23 h20 l3.6 -16 h-25" fill="#eef5ff" stroke="#10264A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="-3" cy="-7" r="3.2" fill="#10264A" /><circle cx="14" cy="-7" r="3.2" fill="#10264A" />
     </g>
   );
 }

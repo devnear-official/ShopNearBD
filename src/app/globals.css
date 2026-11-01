@@ -341,3 +341,6 @@
   .sn-float, .sn-bob, .sn-leg-a, .sn-leg-b, .sn-road-dash, .sn-hub-pulse { animation: none; }
   .sn-draw { stroke-dashoffset: 0; transition: none; }
 }
+@keyframes sn-spin { to { rotate: 360deg; } }
+.sn-spin { animation: sn-spin 40s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .sn-spin { animation: none; } }
