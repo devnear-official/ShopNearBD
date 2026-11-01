@@ -23,6 +23,13 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
   }
   const [viewer, setViewer] = useState<number | null>(null);
   const strip = useRef<HTMLDivElement>(null);
+  // Each photo's own width/height ratio (from the DB, else measured on load) so its frame fits it exactly, with no empty bars.
+  const [measured, setMeasured] = useState<Record<string, number>>({});
+  const ratioOf = (img: ProductImage) => (img.width && img.height ? img.width / img.height : measured[img.url] ?? 0.8);
+  const measure = (url: string) => (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+    if (w && h) setMeasured((cur) => (cur[url] === w / h ? cur : { ...cur, [url]: w / h }));
+  };
 
   // Variant change → bring its image into view.
   useEffect(() => {
@@ -58,14 +65,15 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
         <div className="flex max-h-[calc(100dvh-8rem)] flex-col gap-3 overflow-y-auto pr-1" role="list" aria-label="Image thumbnails">
           {images.map((img, i) => (
             <button key={img.url} type="button" role="listitem" onClick={() => setCurrent(i)}
-              className={clsx("relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`} aria-current={i === current}>
-              <Image src={img.url} alt="" fill sizes="80px" className="object-contain" />
+              style={{ aspectRatio: ratioOf(img) }} className={clsx("relative w-full shrink-0 overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`} aria-current={i === current}>
+              <Image src={img.url} alt="" fill sizes="80px" className="object-cover" onLoad={measure(img.url)} />
             </button>
           ))}
         </div>
-        <div className="relative">
-          <button type="button" onClick={() => setViewer(current)} className="group tag-hole relative block w-full cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud" aria-label={`Open image ${current + 1} full screen`}>
-            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} width={0} height={0} priority sizes="(min-width:1280px) 640px, 55vw" className="h-auto max-h-[calc(100dvh-8rem)] w-full object-contain" />
+        {/* The frame takes the photo's exact ratio and is as wide as fits the screen height, so the photo fills it edge to edge. */}
+        <div className="relative mx-auto" style={{ aspectRatio: ratioOf(images[current]), width: `min(100%, calc((100dvh - 8rem) * ${ratioOf(images[current])}))` }}>
+          <button type="button" onClick={() => setViewer(current)} className="group tag-hole absolute inset-0 block cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud" aria-label={`Open image ${current + 1} full screen`}>
+            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} fill priority sizes="(min-width:1280px) 640px, 55vw" className="object-cover" onLoad={measure(images[current].url)} />
             <span className="absolute bottom-4 right-4 grid size-11 place-items-center rounded-full bg-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand className="size-5" /></span>
           </button>
           {images.length > 1 && (
