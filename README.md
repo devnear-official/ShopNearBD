@@ -254,3 +254,4 @@ Public catalogue pages are prerendered and revalidated (`use cache` with `cacheL
 - Real store contact details, delivery fees, return/refund/warranty policies.
 - Real product photography (the seed images are generated illustrations for development).
 - An SMTP provider for Supabase Auth emails (password reset).
+- Done
