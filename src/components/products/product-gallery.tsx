@@ -54,8 +54,8 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
       </div>
 
       {/* Desktop: thumbnail rail + one large image; click a thumbnail to switch, click the image to zoom */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-[5rem_1fr]">
-        <div className="flex max-h-[40rem] flex-col gap-3 overflow-y-auto pr-1" role="list" aria-label="Image thumbnails">
+      <div className="sticky top-28 hidden h-max items-start gap-4 lg:grid lg:grid-cols-[5rem_1fr]">
+        <div className="flex max-h-[calc(100dvh-8rem)] flex-col gap-3 overflow-y-auto pr-1" role="list" aria-label="Image thumbnails">
           {images.map((img, i) => (
             <button key={img.url} type="button" role="listitem" onClick={() => setCurrent(i)}
               className={clsx("relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`} aria-current={i === current}>
@@ -63,9 +63,9 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
             </button>
           ))}
         </div>
-        <div className="relative h-max">
+        <div className="relative">
           <button type="button" onClick={() => setViewer(current)} className="group tag-hole relative block w-full cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud" aria-label={`Open image ${current + 1} full screen`}>
-            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} width={0} height={0} priority sizes="(min-width:1280px) 640px, 55vw" className="h-auto w-full object-contain" />
+            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} width={0} height={0} priority sizes="(min-width:1280px) 640px, 55vw" className="h-auto max-h-[calc(100dvh-8rem)] w-full object-contain" />
             <span className="absolute bottom-4 right-4 grid size-11 place-items-center rounded-full bg-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand className="size-5" /></span>
           </button>
           {images.length > 1 && (
