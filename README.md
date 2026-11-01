@@ -255,3 +255,4 @@ Public catalogue pages are prerendered and revalidated (`use cache` with `cacheL
 - Real product photography (the seed images are generated illustrations for development).
 - An SMTP provider for Supabase Auth emails (password reset).
 - Done
+- Done
