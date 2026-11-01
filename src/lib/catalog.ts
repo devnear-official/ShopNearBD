@@ -17,7 +17,7 @@ export type ProductDetail = ProductCard & {
   sku: string; description: string | null; specifications: { label: string; value: string }[]; tags: string[]; collections: string[];
   seo_title: string | null; seo_description: string | null; og_image_url: string | null; category_id: string | null; status: string;
 };
-export type Category = { id: string; slug: string; name: string; name_bn: string | null; description: string | null; accent: string | null; image_url: string | null; product_count: number; cover: string | null };
+export type Category = { id: string; slug: string; name: string; name_bn: string | null; description: string | null; accent: string | null; image_url: string | null; product_count: number; cover: string | null; thumbs: string[] };
 
 export type StoreSettings = {
   name: string; tagline: string; tagline_bn: string; phone: string; whatsapp: string; email: string; address: string; hours: string;
@@ -76,7 +76,10 @@ export async function getCategories(): Promise<Category[]> {
     select c.id, c.slug, c.name, c.name_bn, c.description, c.accent, c.image_url,
       (select count(*)::int from public.products p where p.category_id = c.id) as product_count,
       coalesce(c.image_url, (select i.url from public.products p join public.product_images i on i.product_id = p.id
-        where p.category_id = c.id order by p.is_featured desc, p.sold_count desc, i.sort_order limit 1)) as cover
+        where p.category_id = c.id order by p.is_featured desc, p.sold_count desc, i.sort_order limit 1)) as cover,
+      coalesce((select array_agg(t.url) from (
+        select (select i.url from public.product_images i where i.product_id = p.id order by i.sort_order limit 1) as url
+        from public.products p where p.category_id = c.id order by p.is_featured desc, p.sold_count desc limit 5) t where t.url is not null), '{}'::text[]) as thumbs
     from public.categories c where c.parent_id is null order by c.sort_order, c.name`);
 }
 
