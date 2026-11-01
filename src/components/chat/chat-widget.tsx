@@ -27,7 +27,9 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
   const [loaded, setLoaded] = useState(false);
   const lastId = useRef(0);
   const list = useRef<HTMLDivElement>(null);
-  const ref = useDialog<HTMLDivElement>(open, () => setOpen(false));
+  // Full-screen on phones (modal, page locked); a corner popover on desktop (page behind stays scrollable).
+  const [fullScreen, setFullScreen] = useState(true);
+  const ref = useDialog<HTMLDivElement>(open, () => setOpen(false), fullScreen);
   // On the phone checkout the floating button would sit over form fields; checkout offers its own help button instead.
   const onCheckout = usePathname().startsWith("/checkout");
 
@@ -60,6 +62,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
 
   const openChatRef = useRef<() => void>(() => {});
   const openChat = () => {
+    setFullScreen(!window.matchMedia("(min-width: 640px)").matches);
     setOpen(true);
     setUnread(false);
     if (!loaded) {
@@ -157,7 +160,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
           <m.div
             ref={ref}
             role="dialog"
-            aria-modal="true"
+            aria-modal={fullScreen}
             aria-label="ShopNear support chat"
             initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
@@ -176,7 +179,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
               <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Close chat"><X className="size-5" /></button>
             </header>
 
-            <div ref={list} className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+            <div ref={list} className="min-h-0 flex-1 touch-pan-y space-y-3 overflow-y-auto overscroll-contain px-4 py-4" aria-live="polite">
               <Bubble role="assistant" content={greeting} />
               {messages.length === 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
