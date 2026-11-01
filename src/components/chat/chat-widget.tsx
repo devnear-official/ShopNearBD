@@ -27,9 +27,8 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
   const [loaded, setLoaded] = useState(false);
   const lastId = useRef(0);
   const list = useRef<HTMLDivElement>(null);
-  // Full-screen on phones (modal, page locked); a corner popover on desktop (page behind stays scrollable).
-  const [fullScreen, setFullScreen] = useState(true);
-  const ref = useDialog<HTMLDivElement>(open, () => setOpen(false), fullScreen);
+  // Never locks the page: the background stays scrollable while the chat is open.
+  const ref = useDialog<HTMLDivElement>(open, () => setOpen(false), false);
   // On the phone checkout the floating button would sit over form fields; checkout offers its own help button instead.
   const onCheckout = usePathname().startsWith("/checkout");
 
@@ -62,7 +61,6 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
 
   const openChatRef = useRef<() => void>(() => {});
   const openChat = () => {
-    setFullScreen(!window.matchMedia("(min-width: 640px)").matches);
     setOpen(true);
     setUnread(false);
     if (!loaded) {
@@ -160,7 +158,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
           <m.div
             ref={ref}
             role="dialog"
-            aria-modal={fullScreen}
+            aria-modal="false"
             aria-label="ShopNear support chat"
             initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}

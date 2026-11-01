@@ -44,7 +44,7 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
         <div ref={strip} onScroll={onStripScroll} className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto rounded-[2rem]" aria-roledescription="carousel" aria-label={`${name} images`}>
           {images.map((img, i) => (
             <button key={img.url} type="button" onClick={() => setViewer(i)} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-cloud" aria-label={`Open image ${i + 1} of ${images.length} full screen`}>
-              <Image src={img.url} alt={img.alt || name} fill priority={i === 0} sizes="100vw" className="object-cover" />
+              <Image src={img.url} alt={img.alt || name} fill priority={i === 0} sizes="100vw" className="object-contain" />
             </button>
           ))}
         </div>
@@ -57,7 +57,7 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
       <div className="hidden gap-4 lg:grid lg:grid-cols-[5rem_1fr]">
         <div className="flex max-h-[40rem] flex-col gap-3 overflow-y-auto pr-1" role="list" aria-label="Image thumbnails">
           {images.map((img, i) => (
-            <button key={img.url} type="button" role="listitem" onClick={() => setCurrent(i)} onMouseEnter={() => setCurrent(i)}
+            <button key={img.url} type="button" role="listitem" onClick={() => setCurrent(i)}
               className={clsx("relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl bg-cloud transition", i === current ? "ring-2 ring-electric ring-offset-2" : "opacity-70 hover:opacity-100")} aria-label={`Show image ${i + 1}`} aria-current={i === current}>
               <Image src={img.url} alt="" fill sizes="80px" className="object-cover" />
             </button>
@@ -65,7 +65,7 @@ export function ProductGallery({ images, name, activeIndex }: { images: ProductI
         </div>
         <div className="sticky top-28 h-max">
           <button type="button" onClick={() => setViewer(current)} className="group tag-hole relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-[2.25rem] bg-cloud" aria-label={`Open image ${current + 1} full screen`}>
-            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} fill priority sizes="(min-width:1280px) 640px, 55vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+            <Image key={images[current].url} src={images[current].url} alt={images[current].alt || name} fill priority sizes="(min-width:1280px) 640px, 55vw" className="object-contain transition duration-500 group-hover:scale-[1.03]" />
             <span className="absolute bottom-4 right-4 grid size-11 place-items-center rounded-full bg-white/85 opacity-0 backdrop-blur transition group-hover:opacity-100"><Expand className="size-5" /></span>
           </button>
           {images.length > 1 && (
