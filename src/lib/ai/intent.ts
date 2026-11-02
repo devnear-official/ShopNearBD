@@ -6,7 +6,7 @@ export type Intent = "order_status" | "human" | "shipping" | "payment" | "return
 
 const rules: [Intent, RegExp][] = [
   ["human", /\b(human|agent|person|representative|call me|talk to (someone|staff))\b|মানুষ|এজেন্ট|কথা বল|manush|kotha bol|admin er sathe/i],
-  ["order_status", /\b(my order|order status|where is|track|tracking|parcel|consignment|SN\d{6,})\b|অর্ডার(টা)? কোথায়|অর্ডার স্ট্যাটাস|ট্র্যাক|order (ta|kothay|koi)|parcel (kothay|koi)|amar order/i],
+  ["order_status", /\b(my order|order status|where is|track|tracking|parcel|consignment|SN\d{6,}|order number)\b|অর্ডার(টা)? কোথায়|অর্ডার স্ট্যাটাস|ট্র্যাক|order (ta|kothay|koi)|parcel (kothay|koi)|amar order/i],
   ["shipping", /\b(deliver|delivery|shipping|courier|charge|how many days|when will|dhaka|outside dhaka|district)\b|ডেলিভারি|চার্জ|কত দিন|কবে পাব|delivery charge|koto din|kobe pabo|charge koto/i],
   ["payment", /\b(pay|payment|bkash|nagad|cash on delivery|cod|trx|transaction|advance)\b|পেমেন্ট|বিকাশ|নগদ|ক্যাশ অন|টাকা দিব|payment kivabe|bikash/i],
   ["returns", /\b(return|refund|exchange|warranty|damaged|broken|wrong item|replace)\b|ফেরত|রিফান্ড|বদল|ওয়ারেন্টি|ভাঙা|ferot|refund|warranty|kharap/i],

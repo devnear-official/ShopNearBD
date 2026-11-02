@@ -5,6 +5,7 @@ import { sendPurchase, trackingConfig } from "@/lib/tracking/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
+import { notifyOrderEvent, notifyOrderStatus } from "@/lib/order-sms";
 import { bdPhone } from "@/lib/validation/common";
 import type { ActionState } from "@/components/admin/form";
 
@@ -28,6 +29,7 @@ export async function transitionOrder(_: ActionState, form: FormData): Promise<A
     await admin.db((tx) => tx`select public.admin_transition_order(${p.data.orderId}, ${p.data.to}, ${p.data.note ?? null}, ${p.data.restock !== "no"})`);
     revalidatePath(`/admin/orders/${p.data.orderId}`);
     if (p.data.to === "cancelled" || p.data.to === "returned") updateTag("catalog");
+    { const id = p.data.orderId; after(() => notifyOrderStatus(id)); }
     if (p.data.to === "confirmed") {
       const orderId = p.data.orderId;
       // "Purchase on confirmation" mode: only orders the team has confirmed are reported to ad platforms.
@@ -98,5 +100,54 @@ export async function updateOrderDelivery(_: ActionState, form: FormData): Promi
     if (!rows.length) return { ok: false, error: "Delivery details can't be changed after the parcel is handed to the courier." };
     revalidatePath(`/admin/orders/${d.orderId}`);
     return { ok: true, message: "Delivery details updated." };
+  }) as Promise<ActionState>;
+}
+
+/** Customer-visible progress message ("Processing", "Out for delivery" or a plain note). Never edits history: it appends. */
+export async function postOrderUpdate(_: ActionState, form: FormData): Promise<ActionState> {
+  const p = z.object({ orderId: z.string().uuid(), stage: z.enum(["processing", "out_for_delivery", "info"]), message: z.string().trim().max(300).optional(), sms: z.string().optional() }).safeParse(Object.fromEntries(form));
+  if (!p.success) return { ok: false, error: "Invalid request." };
+  if (p.data.stage === "info" && !p.data.message) return { ok: false, error: "Write the message the customer should see." };
+  return guard(async (admin) => {
+    const d = p.data;
+    const [o] = await admin.db((tx) => tx<{ status: string }[]>`select status from public.orders where id = ${d.orderId}`);
+    if (!o) return { ok: false, error: "Order not found." };
+    if (["delivered", "cancelled", "returned"].includes(o.status)) return { ok: false, error: `This order is already ${o.status}; no further progress updates.` };
+    if (d.stage === "out_for_delivery" && o.status !== "shipped") return { ok: false, error: "Mark the order Shipped first — it can't be out for delivery before that." };
+    if (d.stage === "processing" && !["confirmed", "packed"].includes(o.status)) return { ok: false, error: "Processing applies after the order is confirmed." };
+    await admin.db((tx) => tx`insert into public.order_updates (order_id, stage, message, actor_id, actor_label) values (${d.orderId}, ${d.stage}, ${d.message || null}, ${admin.id}, ${admin.email ?? "admin"})`);
+    revalidatePath(`/admin/orders/${d.orderId}`);
+    if (d.stage !== "info" && d.sms !== "no") { const id = d.orderId; const ev = d.stage; after(() => notifyOrderEvent(id, ev)); }
+    return { ok: true, message: "Update published to the customer's tracking page." };
+  }) as Promise<ActionState>;
+}
+
+/** Courier booked outside the API integrations: record name, tracking ID and link so the customer can see them. */
+export async function saveManualShipment(_: ActionState, form: FormData): Promise<ActionState> {
+  const p = z.object({
+    orderId: z.string().uuid(), courier_name: z.string().trim().min(2).max(60), tracking_code: z.string().trim().min(2).max(80),
+    tracking_url: z.string().trim().max(500).optional(),
+  }).safeParse(Object.fromEntries(form));
+  if (!p.success) return { ok: false, error: "Enter the courier name and tracking ID." };
+  const url = p.data.tracking_url || null;
+  if (url) { try { if (new URL(url).protocol !== "https:") throw 0; } catch { return { ok: false, error: "The tracking link must start with https://" }; } }
+  return guard(async (admin) => {
+    const d = p.data;
+    const done = await admin.db(async (tx) => {
+      const [o] = await tx<{ phone: string; customer_name: string; address: string; district: string; total: number; payment_method: string }[]>`select phone, customer_name, address, district, total, payment_method from public.orders where id = ${d.orderId}`;
+      if (!o) return "none" as const;
+      const [live] = await tx<{ id: string; provider: string }[]>`select id, provider from public.shipments where order_id = ${d.orderId} and status not in ('failed', 'cancelled')`;
+      if (live && live.provider !== "manual") return "api" as const;
+      if (live) await tx`update public.shipments set courier_name = ${d.courier_name}, tracking_code = ${d.tracking_code}, tracking_url = ${url}, consignment_id = ${d.tracking_code} where id = ${live.id}`;
+      else await tx`insert into public.shipments (order_id, provider, status, idempotency_key, courier_name, tracking_code, tracking_url, consignment_id, cod_amount, recipient, created_by)
+        values (${d.orderId}, 'manual', 'created', ${"manual:" + d.orderId + ":" + Date.now()}, ${d.courier_name}, ${d.tracking_code}, ${url}, ${d.tracking_code}, ${o.payment_method === "cod" ? o.total : 0},
+        ${tx.json({ name: o.customer_name, phone: o.phone, address: o.address, district: o.district })}, ${admin.id})`;
+      await tx`insert into public.audit_logs (actor_id, actor_label, action, entity, entity_id, data) values (${admin.id}, ${admin.email ?? "admin"}, 'shipment.manual', 'order', ${d.orderId}, ${tx.json({ courier: d.courier_name })})`;
+      return "ok" as const;
+    });
+    if (done === "none") return { ok: false, error: "Order not found." };
+    if (done === "api") return { ok: false, error: "A courier-API shipment already exists for this order." };
+    revalidatePath(`/admin/orders/${d.orderId}`);
+    return { ok: true, message: "Courier details saved and shown to the customer." };
   }) as Promise<ActionState>;
 }

@@ -27,7 +27,7 @@ export default async function CouriersPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Couriers" description="Book parcels from an order page. This screen shows provider setup, shipments and cash-on-delivery reconciliation." />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {Object.values(PROVIDERS).map((p) => {
           const missing = p.missingConfig();
           return (
@@ -51,7 +51,7 @@ export default async function CouriersPage({ searchParams }: { searchParams: Pro
         ) : <Empty>No shipments yet.</Empty>}
         <p className="mt-3 text-xs text-slate">“Reported” comes from courier webhooks/status checks or manual “COD collected” entries. Match it against the courier&apos;s payment statement before marking payouts received.</p>
       </Card>
-      <Card title="Shipments" className="mt-4" actions={<div className="flex gap-1 text-xs">{["", "in_transit", "delivered", "returned", "failed"].map((s) => <Link key={s} href={`/admin/couriers${s ? `?status=${s}` : ""}`} className={`rounded-full px-3 py-1 font-semibold ${status === s || (!status && !s) ? "bg-ink text-white" : "bg-paper"}`}>{s || "all"}</Link>)}</div>}>
+      <Card title="Shipments" className="mt-4" actions={<div className="flex flex-wrap gap-1 text-xs">{["", "in_transit", "delivered", "returned", "failed"].map((s) => <Link key={s} href={`/admin/couriers${s ? `?status=${s}` : ""}`} className={`rounded-full px-3 py-1 font-semibold ${status === s || (!status && !s) ? "bg-ink text-white" : "bg-paper"}`}>{s || "all"}</Link>)}</div>}>
         {shipments.length ? (
           <Table head={["Order", "Courier", "Consignment", "Status", "COD", "Updated"]}>
             {shipments.map((s) => (

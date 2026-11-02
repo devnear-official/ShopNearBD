@@ -13,7 +13,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
-  serverExternalPackages: ["postgres"],
+  serverExternalPackages: ["postgres", "pdfkit"],
+  // The invoice route reads fonts and the logo from disk; make sure they ship with the function.
+  outputFileTracingIncludes: { "/order/[number]/invoice": ["./src/lib/invoice-fonts/**", "./public/brand/logo-640.png"] },
   // Payment screenshots (checkout) still go through a server action; the 1 MB default rejects most phone photos.
   experimental: { serverActions: { bodySizeLimit: "10mb" } },
   images: {

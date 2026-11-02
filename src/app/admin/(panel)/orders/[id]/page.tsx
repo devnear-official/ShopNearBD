@@ -7,7 +7,8 @@ import { formatDateTime, formatTaka } from "@/lib/format";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { Badge, Card, Empty, ORDER_TONE, PageHeader, PAY_LABEL, PAY_TONE, STATUS_LABEL } from "@/components/admin/ui";
 import { ActionForm, Field, SubmitButton, TextArea } from "@/components/admin/form";
-import { addOrderNote, recordCod, recordRefund, transitionOrder, updateOrderDelivery, verifyPayment } from "@/actions/admin-orders";
+import { addOrderNote, postOrderUpdate, recordCod, recordRefund, saveManualShipment, transitionOrder, updateOrderDelivery, verifyPayment } from "@/actions/admin-orders";
+import { SMS_EVENT_LABEL, type SmsEvent } from "@/lib/order-sms";
 import { buttonClass } from "@/components/ui/button";
 import { CourierPanel } from "@/components/admin/courier-panel";
 import { CustomerCheck } from "@/components/admin/customer-check";
@@ -38,19 +39,21 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
   const data = await admin.db(async (tx) => {
     const [o] = await tx<Order[]>`select * from public.orders where id = ${id}`;
     if (!o) return null;
-    const [items, payments, history, notes, shipments, prior] = await Promise.all([
+    const [items, payments, history, notes, shipments, prior, updates, sms] = await Promise.all([
       tx<{ id: string; product_id: string | null; product_name: string; variant_name: string; sku: string; quantity: number; unit_price: number; line_total: number; image_url: string | null }[]>`select * from public.order_items where order_id = ${id} order by product_name`,
       tx<{ id: string; method: string; status: string; amount: number; sender_number: string | null; transaction_id: string | null; proof_path: string | null; note: string | null; verified_at: Date | null; created_at: Date }[]>`select * from public.payments where order_id = ${id} order by created_at`,
       tx<{ id: number; from_status: string | null; to_status: string; note: string | null; actor_label: string; created_at: Date }[]>`select * from public.order_status_history where order_id = ${id} order by id`,
       tx<{ id: number; body: string; actor_label: string; created_at: Date }[]>`select * from public.order_notes where order_id = ${id} order by id desc`,
-      tx<{ id: string; provider: string; is_sandbox: boolean; status: string; consignment_id: string | null; tracking_code: string | null; tracking_url: string | null; label_url: string | null; cod_amount: number; cod_collected: number | null; last_error: string | null; attempts: number; created_at: Date; updated_at: Date }[]>`
-        select id, provider, is_sandbox, status, consignment_id, tracking_code, tracking_url, label_url, cod_amount, cod_collected, last_error, attempts, created_at, updated_at from public.shipments where order_id = ${id} order by created_at desc`,
+      tx<{ id: string; provider: string; courier_name: string | null; is_sandbox: boolean; status: string; consignment_id: string | null; tracking_code: string | null; tracking_url: string | null; label_url: string | null; cod_amount: number; cod_collected: number | null; last_error: string | null; attempts: number; created_at: Date; updated_at: Date }[]>`
+        select id, provider, courier_name, is_sandbox, status, consignment_id, tracking_code, tracking_url, label_url, cod_amount, cod_collected, last_error, attempts, created_at, updated_at from public.shipments where order_id = ${id} order by created_at desc`,
       tx<{ r: RiskInput }[]>`select public.customer_risk(${o.phone}) as r`.then((x) => x[0].r),
+      tx<{ id: number; stage: string; message: string | null; actor_label: string; created_at: Date }[]>`select id, stage, message, actor_label, created_at from public.order_updates where order_id = ${id} order by id desc`,
+      tx<{ id: number; event: SmsEvent; status: string; detail: string | null; attempts: number; created_at: Date }[]>`select id, event, status, detail, attempts, created_at from public.order_sms where order_id = ${id} order by id desc`,
     ]);
-    return { o, items, payments, history, notes, shipments, risk: prior };
+    return { o, items, payments, history, notes, shipments, risk: prior, updates, sms };
   });
   if (!data) notFound();
-  const { o, items, payments, history, notes, shipments, risk } = data;
+  const { o, items, payments, history, notes, shipments, risk, updates, sms } = data;
   const store = (await getPublicSettings()).store;
   const confirmText = confirmMessage({
     store: store.name, name: o.customer_name, orderNumber: o.order_number, total: o.total, method: o.payment_method as "cod" | "bkash_manual" | "nagad_manual", address: o.address + (o.area ? `, ${o.area}` : ""), district: o.district,
@@ -74,8 +77,8 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
         description={<>Placed {formatDateTime(o.created_at)} · <Badge tone={ORDER_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge> <Badge tone={PAY_TONE[o.payment_status]}>{PAY_LABEL[o.payment_status]}</Badge></>}
         actions={<a href={`/admin/invoice/${o.id}`} target="_blank" className={buttonClass("ghost", "sm")}><Printer className="size-4" /> Invoice / packing slip</a>} />
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-4">
           <Card title="Items">
             <ul className="divide-y divide-line">
               {items.map((i) => (
@@ -148,6 +151,43 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
 
           <CourierPanel order={{ id: o.id, status: o.status, total: o.total, payment_method: o.payment_method, payment_status: o.payment_status, customer_name: o.customer_name, phone: o.phone, address: o.address, area: o.area, district: o.district, delivery_note: o.delivery_note }} shipments={shipments} />
 
+          <Card title="Customer tracking">
+            <p className="mb-3 text-xs text-slate">What you publish here appears on the customer&apos;s Track Order page. Internal notes stay private.</p>
+            {!["delivered", "cancelled", "returned"].includes(o.status) && (
+              <ActionForm action={postOrderUpdate} className="space-y-2 rounded-2xl bg-paper p-3" resetOnSuccess>
+                <input type="hidden" name="orderId" value={o.id} />
+                <label className="block"><span className="label">Progress update</span>
+                  <select name="stage" className="input"><option value="processing">Processing (after confirmed)</option><option value="out_for_delivery">Out for delivery (after shipped)</option><option value="info">Message only</option></select></label>
+                <Field label="Message shown to customer" name="message" maxLength={300} placeholder="Optional for Processing / Out for delivery" />
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="sms" value="yes" defaultChecked className="accent-electric" /> Also send the customer an SMS</label>
+                <SubmitButton size="sm">Publish update</SubmitButton>
+              </ActionForm>
+            )}
+            {!shipments.some((x) => x.provider !== "manual" && !["failed", "cancelled"].includes(x.status)) && !["cancelled", "returned"].includes(o.status) && (
+              <ActionForm action={saveManualShipment} className="mt-3 grid gap-2 rounded-2xl bg-paper p-3">
+                <p className="text-sm font-semibold">Courier details (manual)</p>
+                <input type="hidden" name="orderId" value={o.id} />
+                <Field label="Courier name" name="courier_name" required maxLength={60} defaultValue={shipments.find((x) => x.provider === "manual")?.courier_name ?? ""} />
+                <Field label="Tracking / consignment ID" name="tracking_code" required maxLength={80} defaultValue={shipments.find((x) => x.provider === "manual")?.tracking_code ?? ""} />
+                <Field label="Tracking link" name="tracking_url" type="url" placeholder="https://" hint="optional" defaultValue={shipments.find((x) => x.provider === "manual")?.tracking_url ?? ""} />
+                <SubmitButton size="sm" variant="dark">Save courier details</SubmitButton>
+              </ActionForm>
+            )}
+            {updates.length > 0 && (
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {updates.map((u) => <li key={u.id}><b>{u.stage === "out_for_delivery" ? "Out for delivery" : u.stage === "processing" ? "Processing" : "Message"}</b>{u.message && <> — {u.message}</>} <span className="text-xs text-mist">· {u.actor_label} · {formatDateTime(u.created_at)}</span></li>)}
+              </ul>
+            )}
+            {sms.length > 0 && (
+              <div className="mt-3 border-t border-line pt-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate">SMS sent</p>
+                <ul className="space-y-1 text-sm">
+                  {sms.map((m) => <li key={m.id}>{SMS_EVENT_LABEL[m.event]} · <Badge tone={m.status === "sent" ? "green" : m.status === "failed" ? "red" : "gray"}>{m.status}</Badge> <span className="text-xs text-mist">{formatDateTime(m.created_at)}{m.detail ? ` · ${m.detail}` : ""}</span></li>)}
+                </ul>
+              </div>
+            )}
+          </Card>
+
           <Card title="Timeline">
             <ol className="relative space-y-4 border-l-2 border-line pl-5 text-sm">
               {history.map((h) => (
@@ -162,7 +202,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card title="Next step">
             {NEXT[o.status] ? (
               <div className="space-y-3">

@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, ExternalLink, MapPin, Package, Truck } from "lucide-react";
+import { Check, Download, ExternalLink, MapPin, Package, Truck } from "lucide-react";
 import clsx from "clsx";
 import { asAnon } from "@/lib/db";
-import { sha256 } from "@/lib/tokens";
-import { ownOrderHash } from "@/lib/customer/auth";
+import { resolveOrderHash, invoicePath } from "@/lib/customer/order-access";
 import { formatDateTime, formatTaka } from "@/lib/format";
 import { CUSTOMER_STATUS, METHOD_LABEL, PAYMENT_STATUS, PROGRESS } from "@/lib/order-status";
 import { getPublicSettings } from "@/lib/catalog";
@@ -22,8 +21,10 @@ type PublicOrder = {
   coupon_code: string | null; created_at: string; delivered_at: string | null;
   items: { product_id: string | null; product_name: string; variant_name: string; quantity: number; unit_price: number; line_total: number; image_url: string | null; slug: string | null }[];
   history: { status: string; at: string }[];
+  updates: { stage: string; message: string | null; at: string }[];
+  updated_at: string;
   payments: { method: string; status: string; amount: number; transaction_id: string | null; at: string }[];
-  shipment: { provider: string; status: string; tracking_code: string | null; tracking_url: string | null; consignment_id: string | null } | null;
+  shipment: { provider: string; courier_name: string | null; status: string; tracking_code: string | null; tracking_url: string | null; consignment_id: string | null } | null;
 };
 
 export default function OrderPage(props: Params) {
@@ -40,8 +41,9 @@ async function OrderView({ params, searchParams }: Params) {
   const [{ number }, sp] = await Promise.all([params, searchParams]);
   if (!/^SN\d{11}$/.test(number)) return <TokenResolver number={number} />;
   const linkToken = sp.t && /^[A-Za-z0-9_-]{20,128}$/.test(sp.t) ? sp.t : null;
-  // Without the private link, a signed-in customer can open orders placed with their own phone number.
-  const hash = linkToken ? sha256(linkToken) : await ownOrderHash(number);
+  const linkSig = sp.s && /^[A-Za-z0-9_-]{22}$/.test(sp.s) ? sp.s : null;
+  // Private token link, signed SMS link, or a signed-in customer who ordered with this phone number.
+  const hash = await resolveOrderHash(number, { t: linkToken, s: linkSig });
   if (!hash) return <TokenResolver number={number} />;
   const token = linkToken ?? "";
   const [row] = await asAnon((tx) => tx<{ o: PublicOrder | null; reviews: { product_id: string; status: string }[] }[]>`
@@ -65,6 +67,11 @@ async function OrderView({ params, searchParams }: Params) {
   const canPayLater = manual && ["unpaid", "failed"].includes(o.payment_status) && !closed;
   const payCfg = manual ? settings.payments[o.payment_method as "bkash_manual" | "nagad_manual"] : null;
   const fresh = sp.new === "1";
+  // Real events only, newest first: status changes plus the messages the team published.
+  const events = [
+    ...o.history.map((h) => ({ label: CUSTOMER_STATUS[h.status]?.label ?? h.status, message: h.status === "pending" ? null : null as string | null, at: h.at })),
+    ...o.updates.map((u) => ({ label: u.stage === "out_for_delivery" ? "Out for delivery" : u.stage === "processing" ? "Processing" : "Update from our team", message: u.message, at: u.at })),
+  ].sort((a, b) => +new Date(b.at) - +new Date(a.at));
 
   return (
     <>
@@ -103,6 +110,25 @@ async function OrderView({ params, searchParams }: Params) {
         <p className="mt-6 rounded-2xl bg-flame/10 p-4 font-semibold text-[#a3290f]">{status.detail}</p>
       )}
 
+      <section aria-labelledby="updates" className="mt-6 rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="updates" className="display t-card">Tracking updates</h2>
+          <a href={invoicePath(o.order_number, { t: linkToken, s: linkSig })} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-white hover:bg-ink-2"><Download className="size-4" /> Download invoice (PDF)</a>
+        </div>
+        <p className="mt-1 text-sm text-slate">Last updated {formatDateTime(o.updated_at)}</p>
+        <ol className="relative mt-4 space-y-4 border-l-2 border-line pl-5">
+          {events.map((ev, k) => (
+            <li key={k} className="relative">
+              <span className={clsx("absolute -left-[1.6rem] top-1.5 size-3 rounded-full ring-4 ring-white", k === 0 ? "bg-electric" : "bg-mist")} />
+              <p className="font-semibold">{ev.label}{k === 0 && <span className="ml-2 rounded-full bg-electric/10 px-2 py-0.5 text-xs font-semibold text-electric">Latest</span>}</p>
+              {ev.message && <p className="text-sm text-ink-2">{ev.message}</p>}
+              <p className="text-xs text-slate">{formatDateTime(ev.at)}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 text-xs text-slate">We only show steps that have actually happened. Parcel location is shown only if the courier provides it — use the courier link below.</p>
+      </section>
+
       <div className="mt-8 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section aria-labelledby="items" className="rounded-[2rem] bg-white p-5 shadow-[var(--shadow-card)] sm:p-7">
           <h2 id="items" className="display t-card">Items</h2>
@@ -139,8 +165,9 @@ async function OrderView({ params, searchParams }: Params) {
             <p className="mt-3 flex gap-2 text-sm"><MapPin className="mt-0.5 size-4 shrink-0 text-tangerine" /><span><b>{o.customer_name}</b> · {o.phone_masked}<br />{o.address}{o.area ? `, ${o.area}` : ""}, {o.district}</span></p>
             {o.shipment ? (
               <div className="mt-4 rounded-2xl bg-paper p-4 text-sm">
-                <p className="flex items-center gap-2 font-semibold"><Truck className="size-4" /> {o.shipment.provider === "sandbox" ? "Courier (test mode)" : o.shipment.provider[0].toUpperCase() + o.shipment.provider.slice(1)}</p>
-                {o.shipment.consignment_id && <p className="mt-1 text-slate">Consignment {o.shipment.consignment_id}</p>}
+                <p className="flex items-center gap-2 font-semibold"><Truck className="size-4" /> {o.shipment.provider === "sandbox" ? "Courier (test mode)" : o.shipment.courier_name || o.shipment.provider[0].toUpperCase() + o.shipment.provider.slice(1)}</p>
+                {o.shipment.tracking_code && <p className="mt-1 text-slate">Tracking ID <span className="font-mono">{o.shipment.tracking_code}</span></p>}
+                {o.shipment.consignment_id && o.shipment.consignment_id !== o.shipment.tracking_code && <p className="mt-1 text-slate">Consignment {o.shipment.consignment_id}</p>}
                 {o.shipment.tracking_url && <a href={o.shipment.tracking_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-electric underline">Track with courier <ExternalLink className="size-3.5" /></a>}
               </div>
             ) : (

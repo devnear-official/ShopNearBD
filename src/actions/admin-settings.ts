@@ -72,8 +72,9 @@ function build(key: string, f: FormData): { value?: unknown; error?: string; isP
       const r = z.object({
         meta_pixel_id: z.string().regex(/^(\d{10,20})?$/, "Meta Pixel ID is the 15–16 digit number from Events Manager"),
         tiktok_pixel_id: z.string().regex(/^([A-Z0-9]{10,30})?$/, "TikTok Pixel ID looks like C1A2B3C4D5E6F7G8H9I0 (letters and digits)"),
+        ga4_id: z.string().regex(/^(G-[A-Z0-9]{6,14})?$/, "Google Analytics ID looks like G-ABC123XYZ"),
         purchase_trigger: z.enum(["placed", "confirmed"]), tiktok_purchase_event: z.enum(["Purchase", "CompletePayment"]), server_events: z.boolean(),
-      }).safeParse({ meta_pixel_id: str(f, "meta_pixel_id").replace(/\s/g, ""), tiktok_pixel_id: str(f, "tiktok_pixel_id").replace(/\s/g, "").toUpperCase(), purchase_trigger: str(f, "purchase_trigger"), tiktok_purchase_event: str(f, "tiktok_purchase_event"), server_events: on(f.get("server_events")) });
+      }).safeParse({ meta_pixel_id: str(f, "meta_pixel_id").replace(/\s/g, ""), tiktok_pixel_id: str(f, "tiktok_pixel_id").replace(/\s/g, "").toUpperCase(), ga4_id: str(f, "ga4_id").replace(/\s/g, "").toUpperCase(), purchase_trigger: str(f, "purchase_trigger"), tiktok_purchase_event: str(f, "tiktok_purchase_event"), server_events: on(f.get("server_events")) });
       return r.success ? { value: r.data, isPublic: true } : { error: r.error.issues[0].message, isPublic: true };
     }
     case "tracking_secrets": {

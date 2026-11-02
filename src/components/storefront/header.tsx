@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { Logo } from "@/components/ui/logo";
 import { Streaks } from "@/components/ui/streaks";
 import { cart, cartCount, useCart } from "@/components/cart/cart-store";
+import { useWishlist } from "@/components/products/wishlist";
 import { useDialog } from "@/hooks/use-dialog";
 import dynamic from "next/dynamic";
 
@@ -19,6 +20,8 @@ type Cat = { slug: string; name: string; name_bn: string | null; accent: string 
 export function Header({ categories }: { categories: Cat[] }) {
   const state = useCart();
   const count = cartCount(state);
+  const { slugs: wished } = useWishlist();
+  const wishCount = wished.length;
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
@@ -121,7 +124,7 @@ export function Header({ categories }: { categories: Cat[] }) {
                 )}
               </AnimatePresence>
             </div>
-            <NavLink href="/shop?collection=commute-kit">Commute Kit</NavLink>
+            <NavLink href="/shop?collection=commute-kit">Combo Bag</NavLink>
             <NavLink href="/help">Help</NavLink>
           </nav>
 
@@ -132,8 +135,9 @@ export function Header({ categories }: { categories: Cat[] }) {
               <kbd className="rounded-md bg-white px-1.5 text-xs text-mist">/</kbd>
             </button>
             <IconButton label="Search products" onClick={() => setSearch(true)} className="md:hidden"><Search className="size-5" /></IconButton>
-            <Link href="/wishlist" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Wishlist" title="Wishlist">
+            <Link href="/wishlist" className="relative hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label={`Wishlist, ${wishCount} item${wishCount === 1 ? "" : "s"}`} title="Wishlist">
               <Heart className="size-5" />
+              {wishCount > 0 && <CountBadge n={wishCount} />}
             </Link>
             <Link href="/order" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Track your orders" title="Track your orders">
               <PackageSearch className="size-5" />
@@ -163,7 +167,7 @@ export function Header({ categories }: { categories: Cat[] }) {
                 )}
               </AnimatePresence>
             </button>
-            <IconButton label="Open menu" onClick={() => setMenu(true)} className="lg:hidden"><Menu className="size-5" /></IconButton>
+            <IconButton label={wishCount > 0 ? `Open menu (${wishCount} in wishlist)` : "Open menu"} onClick={() => setMenu(true)} className="relative lg:hidden"><Menu className="size-5" />{wishCount > 0 && <CountBadge n={wishCount} className="sm:hidden" />}</IconButton>
           </div>
         </div>
       </header>
@@ -198,7 +202,8 @@ export function Header({ categories }: { categories: Cat[] }) {
               <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                 <Link href="/order" className="rounded-2xl bg-white/10 p-4 font-semibold">Track my order</Link>
                 <Link href="/help" className="rounded-2xl bg-white/10 p-4 font-semibold">Help & policies</Link>
-                <Link href="/wishlist" className="rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist</Link>
+                <Link href="/wishlist" className="flex items-center justify-between gap-2 rounded-2xl bg-white/10 p-4 font-semibold">♡ Wishlist{wishCount > 0 && <span className="grid h-6 min-w-6 place-items-center rounded-full bg-tangerine px-1.5 text-xs font-bold text-white tabular-nums">{wishCount}</span>}</Link>
+                <Link href="/shop?collection=commute-kit" className="col-span-2 rounded-2xl bg-white/10 p-4 font-semibold">Combo Bag</Link>
                 <Link href="/account" className="rounded-2xl bg-electric p-4 font-semibold">My account</Link>
               </div>
               <Streaks tone="light" className="mt-10 h-8 w-16 opacity-60" />
@@ -210,6 +215,10 @@ export function Header({ categories }: { categories: Cat[] }) {
       {searchLoaded && <SearchOverlay open={search} mode={searchMode} file={searchFile} onClose={() => { setSearch(false); setSearchMode("text"); setSearchFile(null); }} />}
     </>
   );
+}
+
+function CountBadge({ n, className }: { n: number; className?: string }) {
+  return <span aria-hidden className={clsx("absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-tangerine px-1 text-[0.7rem] font-bold leading-none text-white tabular-nums ring-2 ring-white", className)}>{n > 99 ? "99+" : n}</span>;
 }
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {

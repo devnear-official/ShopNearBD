@@ -1,15 +1,31 @@
 /** Event vocabulary shared by the browser pixels and the server-side APIs. */
-export type TrackEvent = "PageView" | "ViewContent" | "Search" | "AddToCart" | "AddToWishlist" | "InitiateCheckout" | "AddPaymentInfo" | "Purchase";
+export type TrackEvent = "PageView" | "ViewContent" | "Search" | "AddToCart" | "AddToWishlist" | "InitiateCheckout" | "AddPaymentInfo" | "Purchase" | "Contact";
 export type EventItem = { id: string; name?: string; quantity: number; price: number; category?: string };
 export type EventParams = { value?: number; currency?: "BDT"; items?: EventItem[]; search?: string; orderId?: string };
 
 /** Events the browser may ask the server to relay. Purchase is never relayed: it is sent from trusted order data. */
-export const RELAYABLE: TrackEvent[] = ["ViewContent", "Search", "AddToCart", "AddToWishlist", "InitiateCheckout", "AddPaymentInfo"];
+export const RELAYABLE: TrackEvent[] = ["PageView", "Contact", "ViewContent", "Search", "AddToCart", "AddToWishlist", "InitiateCheckout", "AddPaymentInfo"];
 
 export function tiktokEventName(e: TrackEvent, purchaseName: "Purchase" | "CompletePayment" = "Purchase"): string | null {
   if (e === "PageView") return null; // TikTok uses ttq.page()
   if (e === "Purchase") return purchaseName;
   return e;
+}
+
+/** GA4 ecommerce event names (browser only). */
+export const GA4_EVENT: Record<TrackEvent, string> = {
+  PageView: "page_view", ViewContent: "view_item", Search: "search", AddToCart: "add_to_cart", AddToWishlist: "add_to_wishlist",
+  InitiateCheckout: "begin_checkout", AddPaymentInfo: "add_payment_info", Purchase: "purchase", Contact: "contact",
+};
+export function ga4Params(p: EventParams) {
+  const items = p.items ?? [];
+  return strip({
+    currency: p.value !== undefined || items.length ? p.currency ?? "BDT" : undefined,
+    value: p.value,
+    transaction_id: p.orderId,
+    search_term: p.search,
+    items: items.length ? items.map((i) => strip({ item_id: i.id, item_name: i.name, item_category: i.category, price: i.price, quantity: i.quantity })) : undefined,
+  });
 }
 
 export function metaCustomData(p: EventParams) {

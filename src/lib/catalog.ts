@@ -34,7 +34,7 @@ export type HomepageSettings = {
   hero_eyebrow: string; hero_title: string; hero_title_accent: string; hero_subtitle: string; hero_product_slug: string | null;
   campaign_title: string; campaign_body: string; campaign_collection: string; marquee: string[];
 };
-export type TrackingSettings = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
+export type TrackingSettings = { meta_pixel_id: string; tiktok_pixel_id: string; ga4_id?: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
 export type PublicSettings = { store: StoreSettings; shipping: ShippingSettings; payments: PaymentSettings; policies: PolicySettings; homepage: HomepageSettings; tracking?: TrackingSettings };
 
 /** Card columns + aggregated images/variants in one round trip. */
@@ -197,4 +197,22 @@ export async function getFaqs(): Promise<Faq[]> {
   cacheLife("hours");
   cacheTag("faqs");
   return asAnon((tx) => tx<Faq[]>`select id, question, answer from public.support_faqs where is_active order by sort_order, created_at`);
+}
+
+export type HeroBanner = { id: string; title: string; description: string | null; button_text: string | null; image_url: string | null; link_type: string; link_target: string | null };
+export type TickerItem = { id: string; kind: string; text: string; image_url: string | null; link_type: string; link_target: string | null };
+
+/** Live hero slides (RLS hides inactive and out-of-schedule rows). Re-fetched on the hour; admin edits bust it. */
+export async function getHeroBanners(): Promise<HeroBanner[]> {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheTag("promo");
+  return asAnon((tx) => tx<HeroBanner[]>`select id, title, description, button_text, image_url, link_type, link_target from public.hero_banners order by sort_order, created_at limit 12`);
+}
+
+export async function getTickerItems(): Promise<TickerItem[]> {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheTag("promo");
+  return asAnon((tx) => tx<TickerItem[]>`select id, kind, text, image_url, link_type, link_target from public.ticker_items order by sort_order, created_at limit 30`);
 }

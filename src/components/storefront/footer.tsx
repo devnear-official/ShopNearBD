@@ -21,7 +21,7 @@ export function Footer({ settings, categories }: { settings: PublicSettings; cat
       <div className="mx-auto max-w-7xl px-5 pb-10 pt-20 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
           <div>
-            <Logo tone="dark" className="h-10" />
+            <Logo tone="dark" className="h-12" />
             <p className="mt-5 max-w-xs text-white/70">{s.tagline}</p>
             <p className="bn mt-1 text-white/50" lang="bn">{s.tagline_bn}</p>
             <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold">
@@ -50,7 +50,7 @@ export function Footer({ settings, categories }: { settings: PublicSettings; cat
         </div>
 
         {socials.length > 0 && (
-          <div className="mt-12 flex flex-wrap items-center gap-3 border-t border-white/10 pt-8">
+          <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
             <span className="eyebrow mr-2 text-white/45">Follow us</span>
             {socials.map(({ key, label, href, color }) => (
               <a key={key} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
@@ -60,8 +60,6 @@ export function Footer({ settings, categories }: { settings: PublicSettings; cat
             ))}
           </div>
         )}
-
-        <div aria-hidden className="display pointer-events-none mt-16 select-none whitespace-nowrap text-[18vw] leading-none text-white/[0.04] lg:text-[13rem]">shop near.</div>
 
         <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <p>© <Year /> {s.name}. All prices in BDT (৳).</p>

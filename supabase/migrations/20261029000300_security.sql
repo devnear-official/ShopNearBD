@@ -183,7 +183,7 @@ insert into public.site_settings (key, value, is_public) values
   'hero_title_accent', 'Get it faster.',
   'hero_subtitle', 'Curated gadgets, home and lifestyle picks — packed in Dhaka and on its way the same day you order.',
   'hero_product_slug', null,
-  'campaign_title', 'The Commute Kit',
+  'campaign_title', 'The Combo Bag',
   'campaign_body', 'Three things that make a Dhaka commute quieter, cooler and charged. Built around what people actually carry on the bus, the bike and the CNG.',
   'campaign_collection', 'commute-kit',
   'marquee', jsonb_build_array('Cash on Delivery everywhere', 'bKash & Nagad accepted', '7-day easy returns', 'Same-day dispatch in Dhaka')

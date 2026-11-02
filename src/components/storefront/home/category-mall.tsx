@@ -118,11 +118,11 @@ export function CategoryMall({ categories, initialProducts }: { categories: Cate
         <section key={current.slug} aria-label={`${current.name} products`} aria-live="polite" className="rounded-[2rem] bg-white p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:p-6" style={{ borderTop: `4px solid ${accent}` }}>
           <header className="flex flex-wrap items-center gap-3">
             <span className="grid size-12 place-items-center rounded-2xl text-white" style={{ background: `linear-gradient(150deg, ${accent}, ${shade(accent, 0.4)})` }}><CatIcon slug={current.slug} className="size-6" /></span>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-[1_1_11rem]">
               <h3 className="font-display text-xl font-bold sm:text-2xl">{current.name}{current.name_bn && <span className="bn ml-2 text-base font-semibold text-slate" lang="bn">{current.name_bn}</span>}</h3>
-              {current.description && <p className="line-clamp-1 text-sm text-slate">{current.description}</p>}
+              {current.description && <p className="line-clamp-2 text-sm text-slate">{current.description}</p>}
             </div>
-            <ButtonLink href={`/shop?category=${current.slug}`} size="md">View all {current.name} <ArrowRight className="size-4" /></ButtonLink>
+            <ButtonLink href={`/shop?category=${current.slug}`} size="md" className="w-full sm:w-auto">View all {current.name} <ArrowRight className="size-4" /></ButtonLink>
           </header>
 
           {items === undefined ? (

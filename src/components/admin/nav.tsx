@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import clsx from "clsx";
-import { BarChart3, Boxes, FolderTree, Gauge, LogOut, Menu, MessageSquare, Package, Settings, ShoppingCart, Tags, Truck, Users, X, ExternalLink } from "lucide-react";
+import { BarChart3, Boxes, FolderTree, Gauge, Megaphone, Smartphone, LogOut, Menu, MessageSquare, Package, Settings, ShoppingCart, Tags, Truck, Users, X, ExternalLink } from "lucide-react";
 import { adminSignOut } from "@/actions/admin-auth";
 import { Logo } from "@/components/ui/logo";
 
@@ -12,10 +12,12 @@ export const NAV = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
+  { href: "/admin/promotions", label: "Promotions", icon: Megaphone },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/coupons", label: "Coupons", icon: Tags },
   { href: "/admin/chat", label: "Chat", icon: MessageSquare },
+  { href: "/admin/sms", label: "Order SMS", icon: Smartphone },
   { href: "/admin/couriers", label: "Couriers", icon: Truck },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },

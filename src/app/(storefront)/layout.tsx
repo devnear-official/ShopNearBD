@@ -6,6 +6,9 @@ import { CartDrawer } from "@/components/cart/cart-drawer";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { LazyChat } from "@/components/chat/lazy-chat";
 import { Pixels } from "@/components/tracking/pixels";
+import { ContactFloat } from "@/components/chat/contact-float";
+import { waLink } from "@/lib/whatsapp";
+import { messengerLink } from "@/lib/social";
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const [settings, categories] = await Promise.all([getPublicSettings(), getCategories()]);
@@ -19,7 +22,10 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <Footer settings={settings} categories={categories} />
       <CartDrawer freeShippingThreshold={settings.shipping.free_shipping_threshold} />
       <Suspense>
-        <Pixels metaPixelId={process.env.META_PIXEL_ID || settings.tracking?.meta_pixel_id || null} tiktokPixelId={process.env.TIKTOK_PIXEL_ID || settings.tracking?.tiktok_pixel_id || null} server={settings.tracking?.server_events !== false} tiktokPurchase={settings.tracking?.tiktok_purchase_event === "CompletePayment" ? "CompletePayment" : "Purchase"} />
+        <Pixels metaPixelId={process.env.META_PIXEL_ID || settings.tracking?.meta_pixel_id || null} tiktokPixelId={process.env.TIKTOK_PIXEL_ID || settings.tracking?.tiktok_pixel_id || null} ga4Id={process.env.GA4_MEASUREMENT_ID || settings.tracking?.ga4_id || null} server={settings.tracking?.server_events !== false} tiktokPurchase={settings.tracking?.tiktok_purchase_event === "CompletePayment" ? "CompletePayment" : "Purchase"} />
+      </Suspense>
+      <Suspense>
+      <ContactFloat whatsapp={waLink(settings.store.whatsapp, "Hi ShopNear BD!")} messenger={messengerLink(settings.store.social?.messenger)} />
       </Suspense>
       <LazyChat greeting="Hi! আমি ShopNear-এর সহকারী। Product, delivery বা order নিয়ে জিজ্ঞেস করুন।" />
     </MotionProvider>

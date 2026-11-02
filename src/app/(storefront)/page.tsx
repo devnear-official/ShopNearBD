@@ -1,4 +1,6 @@
-import { getCategories, getFeatured, getProduct, getProductsBySlugs, getPublicSettings, listProducts } from "@/lib/catalog";
+import { getCategories, getFeatured, getHeroBanners, getProduct, getProductsBySlugs, getPublicSettings, getTickerItems, listProducts } from "@/lib/catalog";
+import { resolveLink } from "@/lib/promo";
+import { HeroBanners } from "@/components/storefront/home/hero-banners";
 import { Hero } from "@/components/storefront/home/hero";
 import { Marquee } from "@/components/storefront/home/marquee";
 import { CategoryMall } from "@/components/storefront/home/category-mall";
@@ -14,13 +16,15 @@ import { Reveal } from "@/components/ui/reveal";
 export default async function HomePage() {
   const settings = await getPublicSettings();
   const home = settings.homepage;
-  const [heroList, featured, newest, popular, campaign, categories] = await Promise.all([
+  const [heroList, featured, newest, popular, campaign, categories, banners, ticker] = await Promise.all([
     home.hero_product_slug ? getProductsBySlugs([home.hero_product_slug]) : Promise.resolve([]),
     getFeatured(8),
     listProducts({ sort: "newest", pageSize: 8 }),
     listProducts({ sort: "popular", pageSize: 8 }),
     listProducts({ collection: home.campaign_collection, pageSize: 4 }),
     getCategories(),
+    getHeroBanners(),
+    getTickerItems(),
   ]);
   const hero = heroList[0] ?? featured[0] ?? null;
   const spotlight = featured.find((p) => p.slug !== hero?.slug) ?? null;
@@ -30,8 +34,12 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero copy={home} hero={hero} />
-      <Marquee items={home.marquee} />
+      {banners.length > 0 ? (
+        <HeroBanners slides={banners.map((b) => ({ id: b.id, title: b.title, description: b.description, button_text: b.button_text, image_url: b.image_url, href: resolveLink(b.link_type, b.link_target) }))} />
+      ) : (
+        <Hero copy={home} hero={hero} />
+      )}
+      <Marquee items={ticker} fallback={home.marquee} />
 
       <section aria-labelledby="cats" className="mx-auto mt-24 max-w-7xl px-4 sm:px-8">
         <SectionHeading id="cats" eyebrow="Find your lane" title={<>Shop by <span className="text-gradient">category</span></>} bn="ক্যাটাগরি অনুযায়ী কেনাকাটা" />

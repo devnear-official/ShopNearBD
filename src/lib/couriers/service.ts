@@ -1,3 +1,4 @@
+import { notifyOrderStatus } from "../order-sms";
 import "server-only";
 import { system, type Tx } from "../db";
 import type { AdminContext } from "../auth";
@@ -65,6 +66,13 @@ export async function bookShipment(admin: AdminContext, orderId: string, provide
 
 /** Apply a courier status update (webhook, manual sync or sandbox simulation). Idempotent via dedupe key. */
 export async function applyCourierEvent(provider: string, ev: WebhookEvent): Promise<{ applied: boolean; reason?: string }> {
+  const result = await applyCourierEventTx(provider, ev);
+  // After commit: tell the customer (once per event) only about states that are now saved.
+  if (result.applied && result.orderId) await notifyOrderStatus(result.orderId);
+  return { applied: result.applied, reason: result.reason };
+}
+
+async function applyCourierEventTx(provider: string, ev: WebhookEvent): Promise<{ applied: boolean; reason?: string; orderId?: string }> {
   return system(async (tx: Tx) => {
     const [s] = await tx<{ id: string; order_id: string; status: ShipmentStatus; cod_amount: number }[]>`
       select s.id, s.order_id, s.status, s.cod_amount from public.shipments s join public.orders o on o.id = s.order_id
@@ -86,11 +94,11 @@ export async function applyCourierEvent(provider: string, ev: WebhookEvent): Pro
     if (ev.status === "delivered" || ev.status === "partial_delivered") {
       if (["confirmed", "packed"].includes(o.status)) await tx`select public.system_transition_order(${s.order_id}, 'shipped', ${note})`;
       if (o.status !== "delivered") await tx`select public.system_transition_order(${s.order_id}, 'delivered', ${note})`;
-      if (ev.codCollected && ev.codCollected > 0 && s.cod_amount > 0) await tx`select public.system_record_cod(${s.order_id}, ${ev.codCollected}, ${"Reported by courier"})`;
+      if (ev.codCollected && ev.codCollected > 0 && s.cod_amount > 0) await tx`select public.system_record_cod(${s.order_id}, ${Math.min(ev.codCollected, s.cod_amount)}, ${"Reported by courier"})`;
     }
     if ((ev.status === "returned" || ev.status === "cancelled") && o.status === "shipped") {
       await tx`select public.system_transition_order(${s.order_id}, 'returned', ${note})`;
     }
-    return { applied: true };
+    return { applied: true, orderId: s.order_id };
   });
 }

@@ -188,14 +188,15 @@ export function Checkout({ shipping, payments }: { shipping: ShippingSettings; p
           {!quote && <li className="skeleton h-16 rounded-2xl" />}
         </ul>
 
-        <form onSubmit={(e) => { e.preventDefault(); setAppliedCoupon(coupon.trim().toUpperCase() || undefined); }} className="mt-5 flex gap-2">
+        {/* A div, not a form: the summary also renders inside the order form on phones, and forms can't nest. */}
+        <div role="group" aria-label="Coupon" className="mt-5 flex gap-2">
           <label htmlFor="coupon" className="sr-only">Coupon code</label>
           <div className="relative flex-1">
             <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-mist" />
-            <input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Coupon code" className="input pl-9 uppercase" autoCapitalize="characters" />
+            <input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setAppliedCoupon(coupon.trim().toUpperCase() || undefined); } }} placeholder="Coupon code" className="input pl-9 uppercase" autoCapitalize="characters" />
           </div>
-          <button type="submit" className="h-12 rounded-full bg-ink px-5 text-sm font-semibold text-white transition active:scale-95">Apply</button>
-        </form>
+          <button type="button" onClick={() => setAppliedCoupon(coupon.trim().toUpperCase() || undefined)} className="h-12 rounded-full bg-ink px-5 text-sm font-semibold text-white transition active:scale-95">Apply</button>
+        </div>
         {appliedCoupon && (couponIssue ? <p className="field-error">{couponMessage(couponIssue)}</p> : quote && quote.discount > 0 ? <p className="mt-2 text-sm font-semibold text-mint">✓ {appliedCoupon} applied</p> : null)}
 
         <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">

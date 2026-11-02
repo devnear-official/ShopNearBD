@@ -18,7 +18,7 @@ import type { ShippingSettings } from "@/lib/shipping";
 const TABS = [["store", "Store"], ["shipping", "Delivery"], ["payments", "Payments"], ["policies", "Policies"], ["homepage", "Homepage"], ["ai", "AI assistant"], ["tracking", "Ads tracking"], ["sms", "Customer login (SMS)"], ["account", "Account"], ["audit", "Audit log"]] as const;
 type SmsRow = { id: number; phone_masked: string; purpose: string; provider: string; status: string; detail: string | null; created_at: Date };
 type TrackingRow = { id: number; platform: string; event_name: string; event_id: string; status: string; http_status: number | null; detail: string | null; test_mode: boolean; created_at: Date; order_number: string | null };
-type TrackingSettingsRow = { meta_pixel_id: string; tiktok_pixel_id: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
+type TrackingSettingsRow = { meta_pixel_id: string; tiktok_pixel_id: string; ga4_id?: string; purchase_trigger: "placed" | "confirmed"; tiktok_purchase_event: "Purchase" | "CompletePayment"; server_events: boolean };
 type AiSettings = { enabled: boolean; model: string; temperature: number; max_output_tokens: number; per_ip_per_minute: number; per_conversation_per_hour: number; retention_days: number; greeting: string };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
@@ -210,6 +210,7 @@ function TrackingTab({ v, secrets, events }: { v: TrackingSettingsRow; secrets?:
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Meta (Facebook) Pixel ID" name="meta_pixel_id" defaultValue={v?.meta_pixel_id ?? ""} inputMode="numeric" placeholder="e.g. 123456789012345" hint={env.meta ? "META_PIXEL_ID env var overrides this" : "Events Manager → Data sources"} />
             <Field label="TikTok Pixel ID" name="tiktok_pixel_id" defaultValue={v?.tiktok_pixel_id ?? ""} placeholder="e.g. C1A2B3C4D5E6F7G8H9I0" hint={env.tiktok ? "TIKTOK_PIXEL_ID env var overrides this" : "Ads Manager → Assets → Events"} />
+            <Field label="Google Analytics 4 ID (optional)" name="ga4_id" defaultValue={v?.ga4_id ?? ""} placeholder="e.g. G-ABC123XYZ" hint="Analytics → Admin → Data streams" />
             <Select label="Count a Purchase when…" name="purchase_trigger" defaultValue={v?.purchase_trigger ?? "placed"} options={[{ value: "placed", label: "the order is placed (recommended for ad optimisation)" }, { value: "confirmed", label: "the order is confirmed by our team (fewer fake COD orders)" }]} />
             <Select label="TikTok purchase event name" name="tiktok_purchase_event" defaultValue={v?.tiktok_purchase_event ?? "Purchase"} options={[{ value: "Purchase", label: "Purchase (current standard)" }, { value: "CompletePayment", label: "CompletePayment (older campaigns)" }]} />
           </div>
@@ -243,7 +244,7 @@ function TrackingTab({ v, secrets, events }: { v: TrackingSettingsRow; secrets?:
       <Card title="What gets tracked">
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
           {[
-            ["PageView", "every page (browser)"], ["ViewContent", "product page"], ["Search", "typed, voice and photo search"], ["AddToCart", "add to bag"],
+            ["PageView", "every page (browser + server for Meta)"], ["Contact", "WhatsApp / Messenger button click"], ["ViewContent", "product page"], ["Search", "typed, voice and photo search"], ["AddToCart", "add to bag"],
             ["AddToWishlist", "heart button"], ["InitiateCheckout", "checkout or product-page order form"], ["AddPaymentInfo", "payment chosen"], ["Purchase", "thank-you page + server, value = order total in BDT"],
           ].map(([e, d]) => <li key={e} className="rounded-xl bg-paper px-3 py-2"><b className="font-mono">{e}</b> <span className="text-slate">— {d}</span></li>)}
         </ul>

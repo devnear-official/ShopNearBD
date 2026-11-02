@@ -7,10 +7,11 @@ import { asAnon } from "@/lib/db";
 import { sha256 } from "@/lib/tokens";
 import { formatTaka } from "@/lib/format";
 import { getPublicSettings } from "@/lib/catalog";
-import { METHOD_LABEL } from "@/lib/order-status";
+import { CUSTOMER_STATUS, METHOD_LABEL, PAYMENT_STATUS } from "@/lib/order-status";
+import { invoicePath } from "@/lib/customer/order-access";
 import { Celebrate, TokenResolver } from "@/components/checkout/order-client";
 import { PurchasePixel } from "@/components/tracking/purchase-pixel";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, buttonClass } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Thank you for your order", robots: { index: false, follow: false } };
 
@@ -57,7 +58,7 @@ async function ThankYou({ params, searchParams }: Props) {
         <dl className="relative mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Order number</dt><dd className="mt-1 font-mono text-lg font-bold">{o.order_number}</dd></div>
           <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Total</dt><dd className="mt-1 font-display text-2xl font-bold">{formatTaka(o.total)}</dd></div>
-          <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Payment</dt><dd className="mt-1 font-semibold">{METHOD_LABEL[o.payment_method]}</dd></div>
+          <div className="rounded-2xl bg-white/10 p-4"><dt className="text-xs uppercase tracking-wider text-white/60">Payment</dt><dd className="mt-1 font-semibold">{METHOD_LABEL[o.payment_method]}</dd><dd className="mt-0.5 text-sm text-white/70">{PAYMENT_STATUS[o.payment_status]?.label ?? o.payment_status}</dd><dd className="mt-0.5 text-sm text-white/70">Order: {CUSTOMER_STATUS[o.status]?.label ?? o.status}</dd></div>
         </dl>
         <p className="relative mt-6 text-white/85">
           {manual
@@ -68,6 +69,7 @@ async function ThankYou({ params, searchParams }: Props) {
         </p>
         <div className="relative mt-7 flex flex-wrap gap-3">
           <ButtonLink href={trackHref} variant="tangerine" size="lg"><Truck className="size-5" /> Track your order</ButtonLink>
+          <a href={invoicePath(o.order_number, { t: token })} className={buttonClass("light", "lg")}>Download invoice (PDF)</a>
           <ButtonLink href="/shop" variant="light" size="lg">Continue shopping</ButtonLink>
         </div>
       </section>

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { bdE164Digits, hashedIdentity } from "@/lib/tracking/hash";
-import { RELAYABLE, channelOf, metaCustomData, tiktokEventName, tiktokProperties } from "@/lib/tracking/events";
+import { GA4_EVENT, RELAYABLE, channelOf, ga4Params, metaCustomData, tiktokEventName, tiktokProperties } from "@/lib/tracking/events";
 import { buildAttribution } from "@/lib/tracking/attribution";
 
 const sha = (v: string) => createHash("sha256").update(v).digest("hex");
@@ -33,9 +33,16 @@ describe("customer identity hashing", () => {
 });
 
 describe("event mapping", () => {
-  it("never relays Purchase or PageView from the browser", () => {
+  it("never relays Purchase from the browser (it is sent from the stored order), but does relay PageView and Contact", () => {
     expect(RELAYABLE).not.toContain("Purchase");
-    expect(RELAYABLE).not.toContain("PageView");
+    expect(RELAYABLE).toContain("PageView");
+    expect(RELAYABLE).toContain("Contact");
+  });
+  it("has a GA4 name and a TikTok name for every event it sends", () => {
+    expect(GA4_EVENT.Purchase).toBe("purchase");
+    expect(GA4_EVENT.AddToCart).toBe("add_to_cart");
+    expect(ga4Params({ value: 100, orderId: "SN1", items: [{ id: "SKU1", quantity: 2, price: 50 }] })).toEqual({ currency: "BDT", value: 100, transaction_id: "SN1", items: [{ item_id: "SKU1", price: 50, quantity: 2 }] });
+    expect(tiktokEventName("Contact")).toBe("Contact");
   });
 
   it("maps names for TikTok", () => {

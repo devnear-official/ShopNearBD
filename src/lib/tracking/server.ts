@@ -122,7 +122,8 @@ export async function sendServerEvent(e: ServerEvent, cfg?: TrackingConfig): Pro
     const conf = cfg ?? (await trackingConfig());
     if (!conf.serverEvents) return [];
     const results = await Promise.all([sendMeta(conf, e), sendTikTok(conf, e)]);
-    const logged = results.filter((r) => r.status !== "skipped" || e.name === "Purchase");
+    // PageView is high-volume: only its failures are worth a log row.
+    const logged = results.filter((r) => (r.status !== "skipped" || e.name === "Purchase") && (e.name !== "PageView" || r.status === "failed"));
     if (logged.length) {
       await system((tx) => tx`insert into public.tracking_events ${tx(logged.map((r) => ({
         platform: r.platform, event_name: e.name, event_id: e.eventId, order_id: e.orderId ?? null, status: r.status, http_status: r.httpStatus ?? null,

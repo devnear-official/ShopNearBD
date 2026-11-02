@@ -112,14 +112,14 @@ export function ProductCard({ product, priority, className, tone = "light", larg
       </div>
 
       <div className="mt-3 flex flex-1 flex-col px-1">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1 min-[400px]:flex-row min-[400px]:items-start min-[400px]:justify-between min-[400px]:gap-3">
           <div className="min-w-0">
             {product.category && <p className={clsx("eyebrow mb-1", dark ? "text-white/45" : "text-mist")}>{product.category.name}</p>}
             <h3 className={clsx("line-clamp-2 font-semibold leading-snug", dark ? "text-white" : "text-ink")}>
               <IntentLink href={href} className="hover:underline hover:decoration-electric hover:decoration-2 hover:underline-offset-4">{product.name}</IntentLink>
             </h3>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="flex shrink-0 flex-wrap items-baseline gap-x-2 min-[400px]:block min-[400px]:text-right">
             <AnimatePresence mode="popLayout" initial={false}>
               <m.p key={price} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -8, opacity: 0 }} transition={{ duration: 0.2 }}
                 className={clsx("font-display text-lg font-bold tabular-nums", dark ? "text-white" : "text-ink")}>

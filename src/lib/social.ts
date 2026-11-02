@@ -11,3 +11,14 @@ export const SOCIALS = [
   { key: "pinterest", label: "Pinterest", color: "#e60023" },
 ] as const;
 export type SocialKey = (typeof SOCIALS)[number]["key"];
+
+/** The configured Messenger link, only if it is an https link to a Messenger/Facebook host (admin text is not trusted blindly). */
+export function messengerLink(raw: string | null | undefined): string | null {
+  try {
+    const u = new URL((raw ?? "").trim());
+    const ok = u.protocol === "https:" && /^(m\.me|(www\.|m\.)?(facebook|messenger)\.com|fb\.me)$/i.test(u.hostname);
+    return ok ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}

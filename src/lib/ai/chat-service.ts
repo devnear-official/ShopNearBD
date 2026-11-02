@@ -7,6 +7,7 @@ import { classify } from "./intent";
 import { retrieve } from "./retrieval";
 import { contextBlock, fallbackReply, isBangla, systemPrompt } from "./prompt";
 import { generate, geminiConfigured } from "./gemini";
+import { answerOrderQuestion } from "./order-lookup";
 
 export type AiSettings = { enabled: boolean; model: string; temperature: number; max_output_tokens: number; per_ip_per_minute: number; per_conversation_per_hour: number; retention_days: number; greeting: string };
 export type ChatMessage = { id: number; role: "user" | "assistant" | "admin" | "system"; content: string; created_at: string };
@@ -39,7 +40,7 @@ export type SendResult =
   | { ok: true; token: string; mode: "ai" | "human"; reply: ChatMessage | null }
   | { ok: false; error: string; status: number };
 
-export async function sendMessage(input: { token?: string; message: string; orders: { number: string; token: string }[]; wantHuman?: boolean; ipHash: string; name?: string }): Promise<SendResult> {
+export async function sendMessage(input: { token?: string; message: string; orders: { number: string; token: string }[]; wantHuman?: boolean; ipHash: string; name?: string; customerPhone?: string | null }): Promise<SendResult> {
   const settings = await aiSettings();
   const text = input.message.trim().slice(0, 1000);
   if (!text && !input.wantHuman) return { ok: false, error: "Type a message.", status: 400 };
@@ -69,6 +70,14 @@ export async function sendMessage(input: { token?: string; message: string; orde
     if (conv.mode === "human" && intent !== "human") return { ok: true, token: token!, mode: "human", reply: null };
     const content = isBangla(text) ? "আমাদের টিমকে জানানো হয়েছে — একজন সদস্য এখানেই উত্তর দেবেন। কাজের সময়: শনি–বৃহস্পতি, সকাল ১০টা–রাত ৮টা।" : "I've let our team know — a person will reply right here. (Support hours are shown on the Help page.)";
     return { ok: true, token: token!, mode: "human", reply: await saveAssistant(conv.id, content, { intent, source: "handoff" }) };
+  }
+
+  // Order questions are answered from live database facts with fixed wording (never by the language model),
+  // after checking the customer may see that order.
+  if (intent === "order_status" || /\bSN\d{11}\b/i.test(text)) {
+    const recent = await system((tx) => tx<{ content: string }[]>`select content from public.chat_messages where conversation_id = ${conv!.id} and role = 'user' order by id desc limit 4`);
+    const a = await answerOrderQuestion({ text, recentUserText: recent.map((r) => r.content).join("\n"), tokens: input.orders, customerPhone: input.customerPhone ?? null, ipHash: input.ipHash, bangla: isBangla(text) });
+    return { ok: true, token: token!, mode: "ai", reply: await saveAssistant(conv.id, a.text, { intent: "order_status", source: "order-lookup" }) };
   }
 
   const ctx = await retrieve(intent, text, input.orders);
