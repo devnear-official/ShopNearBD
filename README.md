@@ -256,3 +256,4 @@ Public catalogue pages are prerendered and revalidated (`use cache` with `cacheL
 - An SMTP provider for Supabase Auth emails (password reset).
 - Done
 - Done
+- Done
