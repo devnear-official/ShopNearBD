@@ -101,7 +101,7 @@ Then open http://localhost:3000 and http://localhost:3000/admin.
 
 See [docs/database.md](docs/database.md) for the schema diagram, the security model and the reasoning behind checkout, privacy and the order state machine.
 
-Apply migrations to a hosted project with the Supabase CLI (`supabase link` then `supabase db push`) or with `DATABASE_URL=… npm run db:migrate` (records applied files in `app_meta.migrations`). Seed only development/staging databases.
+Apply **all** migrations to the target database before deploying, with the Supabase CLI (`supabase link` then `supabase db push`) or with `DATABASE_URL=… npm run db:migrate` (records applied files in `app_meta.migrations`). Storefront routes query the database during `next build`, so an unapplied migration can fail the Vercel build. Seed only development/staging databases.
 
 ### Initial admin
 
@@ -227,7 +227,7 @@ The responsive suite visits storefront and admin pages at 320, 360, 375, 390, 43
 
 A step-by-step go-live checklist for whoever deploys (Vercel or your own server) is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
-1. Create a Supabase project. Run the migrations (`supabase db push`). Configure Auth (disable public sign-ups if only admins sign in; set SMTP; set the site URL and redirect URLs).
+1. Create a Supabase project. Apply every migration (`supabase db push`) before deploying. Configure Auth (disable public sign-ups if only admins sign in; set SMTP; set the site URL and redirect URLs).
 2. Create a Vercel project from this repo. Set every server variable above for Production (and Preview with a separate Supabase project). Use the transaction pooler URL for `DATABASE_URL`.
 3. Deploy, then run `npm run admin:bootstrap` locally against the production env once, and remove `ADMIN_PASS`.
 4. In Admin → Settings, replace every development default (store contact, bKash/Nagad numbers, delivery fees, policies). The admin shows a banner until each section has been saved.
