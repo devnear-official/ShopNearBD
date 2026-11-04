@@ -152,6 +152,9 @@
     background-size: 200% 100%;
     animation: var(--animate-shimmer);
   }
+  .admin-skeleton {
+    background-image: linear-gradient(90deg, #d5deec 25%, #e8edf5 50%, #d5deec 75%);
+  }
   .input {
     width: 100%;
     min-height: 3rem;
