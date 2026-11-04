@@ -259,3 +259,4 @@ Public catalogue pages are prerendered and revalidated (`use cache` with `cacheL
 - Done
 - Done
 - Done
+- Done
