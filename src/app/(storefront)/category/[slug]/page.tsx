@@ -38,15 +38,17 @@ async function CategoryView({ params }: { params: Promise<{ slug: string }> }) {
   if (!cat) notFound();
   const { items, total } = await listProducts({ category: slug, pageSize: 24, sort: "popular" });
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-8">
-      <nav aria-label="Breadcrumb" className="text-sm text-slate"><Link href="/" className="hover:underline">Home</Link> / <Link href="/shop" className="hover:underline">Shop</Link> / <span className="text-ink">{cat.name}</span></nav>
-      <header className="mt-4 rounded-[2.5rem] p-8 text-white sm:p-12" style={{ background: cat.accent ?? "#1E6BFF" }}>
-        <h1 className="display t-page">{cat.name}</h1>
-        {cat.name_bn && <p className="bn mt-1 text-2xl font-semibold opacity-85" lang="bn">{cat.name_bn}</p>}
-        <p className="mt-4 max-w-xl text-base sm:text-lg text-white/85">{cat.description}</p>
-        <ButtonLink href={`/shop?category=${cat.slug}`} variant="light" className="mt-6">Filter & sort {total} products</ButtonLink>
+    <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-8 sm:pt-8">
+      <nav aria-label="Breadcrumb" className="text-xs sm:text-sm text-slate"><Link href="/" className="hover:underline">Home</Link> / <Link href="/shop" className="hover:underline">Shop</Link> / <span className="text-ink font-semibold">{cat.name}</span></nav>
+      <header className="mt-2.5 rounded-2xl p-4 text-white sm:mt-4 sm:rounded-[2.5rem] sm:p-8" style={{ background: cat.accent ?? "#1E6BFF" }}>
+        <h1 className="flex flex-wrap items-baseline gap-x-2 text-xl font-extrabold tracking-tight sm:text-4xl">
+          <span>{cat.name}</span>
+          {cat.name_bn && <span className="bn text-xs font-normal opacity-85 sm:text-xl" lang="bn">({cat.name_bn})</span>}
+        </h1>
+        {cat.description && <p className="mt-1 text-xs text-white/85 line-clamp-2 sm:mt-3 sm:line-clamp-none sm:text-base">{cat.description}</p>}
+        <ButtonLink href={`/shop?category=${cat.slug}`} variant="light" size="sm" className="mt-3 sm:mt-6 sm:h-11 sm:px-6 sm:text-sm">Filter & sort {total} products</ButtonLink>
       </header>
-      <div className="mt-10"><ProductGrid items={items} /></div>
+      <div className="mt-4 sm:mt-10"><ProductGrid items={items} /></div>
     </div>
   );
 }

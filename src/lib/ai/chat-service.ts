@@ -40,10 +40,10 @@ export type SendResult =
   | { ok: true; token: string; mode: "ai" | "human"; reply: ChatMessage | null }
   | { ok: false; error: string; status: number };
 
-export async function sendMessage(input: { token?: string; message: string; orders: { number: string; token: string }[]; wantHuman?: boolean; ipHash: string; name?: string; customerPhone?: string | null }): Promise<SendResult> {
+export async function sendMessage(input: { token?: string; message: string; orders: { number: string; token: string }[]; wantHuman?: boolean; backToAi?: boolean; ipHash: string; name?: string; customerPhone?: string | null }): Promise<SendResult> {
   const settings = await aiSettings();
   const text = input.message.trim().slice(0, 1000);
-  if (!text && !input.wantHuman) return { ok: false, error: "Type a message.", status: 400 };
+  if (!text && !input.wantHuman && !input.backToAi) return { ok: false, error: "Type a message.", status: 400 };
   if (!(await rateLimit(`chat:ip:${input.ipHash}`, settings.per_ip_per_minute, 60))) return { ok: false, error: "You're sending messages quickly — please wait a moment.", status: 429 };
 
   let token = input.token;
@@ -56,6 +56,19 @@ export async function sendMessage(input: { token?: string; message: string; orde
   }
   if (!(await rateLimit(`chat:conv:${conv.id}`, settings.per_conversation_per_hour, 3600))) return { ok: false, error: "This chat has reached its hourly limit. A team member can still help — call us or try later.", status: 429 };
 
+  // Explicit back to AI or keyword to re-engage AI
+  const wantsAi = input.backToAi || (conv.mode === "human" && /\b(ai|bot|assistant|সহকারী|রোবট)\b/i.test(text));
+  if (wantsAi && conv.mode === "human") {
+    await system((tx) => tx`update public.chat_conversations set mode = 'ai', needs_human = false where id = ${conv!.id}`);
+    conv.mode = "ai";
+    if (!text || input.backToAi) {
+      const welcome = isBangla(text || "hi")
+        ? "AI সহকারী চালু করা হয়েছে। 😊 কীভাবে সাহায্য করতে পারি? যেকোনো প্রশ্ন করতে পারেন।"
+        : "Switched back to AI assistant. 😊 How can I help you today?";
+      return { ok: true, token: token!, mode: "ai", reply: await saveAssistant(conv.id, welcome, { intent: "greeting", source: "back_to_ai" }) };
+    }
+  }
+
   const intent = input.wantHuman ? "human" : classify(text);
   await system(async (tx) => {
     if (text) await tx`insert into public.chat_messages (conversation_id, role, content, meta) values (${conv!.id}, 'user', ${text}, ${tx.json({ intent })})`;
@@ -67,8 +80,13 @@ export async function sendMessage(input: { token?: string; message: string; orde
 
   // Hand-off: the team replies from /admin/chat.
   if (intent === "human" || conv.mode === "human") {
-    if (conv.mode === "human" && intent !== "human") return { ok: true, token: token!, mode: "human", reply: null };
-    const content = isBangla(text) ? "আমাদের টিমকে জানানো হয়েছে — একজন সদস্য এখানেই উত্তর দেবেন। কাজের সময়: শনি–বৃহস্পতি, সকাল ১০টা–রাত ৮টা।" : "I've let our team know — a person will reply right here. (Support hours are shown on the Help page.)";
+    if (conv.mode === "human" && intent !== "human") {
+      const pendingMsg = isBangla(text)
+        ? "আমাদের টিমকে আপনার বার্তাটি জানানো হয়েছে — একজন সদস্য শীঘ্রই এখানে রিপ্লাই দেবেন। তাৎক্ষণিক উত্তরের জন্য চাইলে নিচের “Switch back to AI” বাটন চাপতে পারেন।"
+        : "Your message has been forwarded to our team — someone will reply shortly. To get instant answers from our AI, you can tap “Switch back to AI”.";
+      return { ok: true, token: token!, mode: "human", reply: await saveAssistant(conv.id, pendingMsg, { intent, source: "human_pending" }) };
+    }
+    const content = isBangla(text) ? "আমাদের টিমকে জানানো হয়েছে — একজন সদস্য শীঘ্রই এখানেই উত্তর দেবেন। কাজের সময়: শনি–বৃহস্পতি, সকাল ১০টা–রাত ৮টা।" : "I've let our team know — a person will reply right here shortly. (Support hours are shown on the Help page.)";
     return { ok: true, token: token!, mode: "human", reply: await saveAssistant(conv.id, content, { intent, source: "handoff" }) };
   }
 

@@ -9,7 +9,7 @@ const ChatWidget = dynamic(() => import("./chat-widget").then((m) => m.ChatWidge
  * (browser idle, at most 4 s after load), or immediately if something asks
  * to open it. Its code never delays the first screen.
  */
-export function LazyChat({ greeting }: { greeting: string }) {
+export function LazyChat({ greeting, hideLauncher = true }: { greeting: string; hideLauncher?: boolean }) {
   const [ready, setReady] = useState(false);
   const [openNow, setOpenNow] = useState(false);
   useEffect(() => {
@@ -28,5 +28,5 @@ export function LazyChat({ greeting }: { greeting: string }) {
     };
   }, [ready]);
   // An "open chat" request that arrived before the widget loaded opens it on arrival.
-  return ready ? <ChatWidget greeting={greeting} autoOpen={openNow} /> : null;
+  return ready ? <ChatWidget greeting={greeting} autoOpen={openNow} hideLauncher={hideLauncher} /> : null;
 }

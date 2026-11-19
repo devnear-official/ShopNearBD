@@ -35,6 +35,7 @@ Set these for the **Production** environment of the host (copy `.env.example` fo
 | `APP_SECRET` | yes | 32+ random characters (`openssl rand -hex 32`). The app throws without it in production |
 | `CRON_SECRET` | yes | protects `/api/cron/cleanup` |
 | `SMS_PROVIDER` + gateway keys | for customer login | `bulksmsbd` (`BULKSMSBD_API_KEY`, `BULKSMSBD_SENDER_ID`) or `sslwireless` (`SSL_SMS_API_TOKEN`, `SSL_SMS_SID`). Without it, customers cannot log in (ordering still works) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `ORDER_NOTIFICATION_EMAIL` | optional | sends an email to the store when a new order is placed. Gmail: `smtp.gmail.com`, port `465`, `SMTP_SECURE=true`; use a Google App Password, not your account password. `SMTP_FROM` is optional and defaults to `SMTP_USER`. |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | yes, for product photos | Cloudinary → Dashboard → API Keys. Without them the admin cannot upload product images (see section 2a) |
 | `GEMINI_API_KEY` | optional | AI chat replies |
 | `META_PIXEL_ID`, `TIKTOK_PIXEL_ID` | optional | read at **build** time |

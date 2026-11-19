@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getCategories, getPublicSettings } from "@/lib/catalog";
 import { Header } from "@/components/storefront/header";
 import { Footer } from "@/components/storefront/footer";
+import { BottomNav } from "@/components/storefront/bottom-nav";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { LazyChat } from "@/components/chat/lazy-chat";
@@ -18,8 +19,9 @@ export default async function StorefrontLayout({ children }: { children: React.R
         Skip to content
       </a>
       <Header categories={categories.map((c) => ({ slug: c.slug, name: c.name, name_bn: c.name_bn, accent: c.accent }))} />
-      <main id="main" className="min-h-[60vh]">{children}</main>
+      <main id="main" className="min-h-[60vh] pb-16 lg:pb-0">{children}</main>
       <Footer settings={settings} categories={categories} />
+      <BottomNav />
       <CartDrawer freeShippingThreshold={settings.shipping.free_shipping_threshold} />
       <Suspense>
         <Pixels metaPixelId={process.env.META_PIXEL_ID || settings.tracking?.meta_pixel_id || null} tiktokPixelId={process.env.TIKTOK_PIXEL_ID || settings.tracking?.tiktok_pixel_id || null} ga4Id={process.env.GA4_MEASUREMENT_ID || settings.tracking?.ga4_id || null} server={settings.tracking?.server_events !== false} tiktokPurchase={settings.tracking?.tiktok_purchase_event === "CompletePayment" ? "CompletePayment" : "Purchase"} />

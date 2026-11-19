@@ -3,12 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister } from "react-hook-form";
-import { ArrowDown, ArrowUp, Eye, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
+import { ArrowDown, ArrowUp, Eye, ImagePlus, Loader2, Pipette, Plus, Trash2 } from "lucide-react";
 import clsx from "clsx";
 import { getImageUploadSignature, saveProduct } from "@/actions/admin-products";
 import { buttonClass } from "@/components/ui/button";
 import { toast } from "./form";
+import { PRESET_COLORS, swatch, isLight } from "@/lib/colors";
 
 type Variant = { id?: string | null; key: string; name: string; sku: string; options: Record<string, string>; price: string | number | null; sale_price: string | number | null; stock: number; is_active: boolean };
 type Img = { id?: string | null; url: string; storage_path?: string | null; alt: string; variant_key?: string | null; width?: number | null; height?: number | null };
@@ -155,7 +156,7 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
           {errors.variants && <p className="field-error">{errors.variants}</p>}
           <div className="mt-4 space-y-3">
             {variants.fields.map((f, i) => (
-              <VariantRow key={f._k} i={i} register={register} control={control} optionNames={optionNames} errors={errors} onRemove={variants.fields.length > 1 ? () => variants.remove(i) : undefined} />
+              <VariantRow key={f._k} i={i} register={register} control={control} setValue={setValue} optionNames={optionNames} errors={errors} onRemove={variants.fields.length > 1 ? () => variants.remove(i) : undefined} />
             ))}
           </div>
           <button type="button" onClick={() => variants.append({ key: key(), name: "", sku: `${getValues("sku")}-${variants.fields.length + 1}`.toUpperCase(), options: {}, price: null, sale_price: null, stock: 0, is_active: true })} className={clsx(buttonClass("ghost", "sm"), "mt-3")}>
@@ -209,7 +210,158 @@ export function ProductEditor({ initial, categories }: { initial: EditorValues; 
   );
 }
 
-function VariantRow({ i, register, control, optionNames, errors, onRemove }: { i: number; register: UseFormRegister<EditorValues>; control: Control<EditorValues>; optionNames: string[]; errors: Record<string, string>; onRemove?: () => void }) {
+function ColorOptionField({
+  i,
+  optName,
+  control,
+  register,
+  setValue,
+  error,
+}: {
+  i: number;
+  optName: string;
+  control: Control<EditorValues>;
+  register: UseFormRegister<EditorValues>;
+  setValue: UseFormSetValue<EditorValues>;
+  error?: string;
+}) {
+  const colorVal = useWatch({ control, name: `variants.${i}.options.${optName}` as `variants.${number}.name` }) || "";
+  const hexVal = useWatch({ control, name: `variants.${i}.options.${optName}Hex` as `variants.${number}.name` }) || "";
+  const variantName = useWatch({ control, name: `variants.${i}.name` }) || "";
+  const [showPresets, setShowPresets] = useState(false);
+
+  // Active swatch display
+  const activeColor = hexVal || (colorVal ? swatch(colorVal) : "#1B2236");
+
+  const onColorPickerChange = (hex: string) => {
+    setValue(`variants.${i}.options.${optName}Hex` as `variants.${number}.name`, hex, { shouldDirty: true });
+    setValue(`variants.${i}.options.ColorHex` as `variants.${number}.name`, hex, { shouldDirty: true });
+    // If name is blank or default, auto fill with matching preset or hex
+    if (!colorVal || colorVal.trim() === "" || colorVal.startsWith("#")) {
+      const match = PRESET_COLORS.find((p) => p.hex.toLowerCase() === hex.toLowerCase());
+      const newName = match ? match.name : hex;
+      setValue(`variants.${i}.options.${optName}` as `variants.${number}.name`, newName, { shouldDirty: true });
+      if (!variantName || /^option\s+\d+$/i.test(variantName) || variantName === "Default") {
+        setValue(`variants.${i}.name`, newName, { shouldDirty: true });
+      }
+    }
+  };
+
+  const selectPreset = (preset: { name: string; hex: string }) => {
+    setValue(`variants.${i}.options.${optName}` as `variants.${number}.name`, preset.name, { shouldDirty: true });
+    setValue(`variants.${i}.options.${optName}Hex` as `variants.${number}.name`, preset.hex, { shouldDirty: true });
+    setValue(`variants.${i}.options.ColorHex` as `variants.${number}.name`, preset.hex, { shouldDirty: true });
+    if (!variantName || /^option\s+\d+$/i.test(variantName) || variantName === "Default") {
+      setValue(`variants.${i}.name`, preset.name, { shouldDirty: true });
+    }
+    setShowPresets(false);
+  };
+
+  const reg = register(`variants.${i}.options.${optName}` as `variants.${number}.name`);
+
+  return (
+    <div className="sm:col-span-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate">{optName} (রং)</span>
+        <button
+          type="button"
+          onClick={() => setShowPresets((s) => !s)}
+          className="text-[11px] font-semibold text-electric hover:underline"
+        >
+          {showPresets ? "Hide palette" : "Palette ▾"}
+        </button>
+      </div>
+
+      <div className="relative mt-1 flex items-center gap-1.5">
+        {/* Color picker circle */}
+        <label
+          title="Click to pick exact color"
+          className="group relative grid size-10 shrink-0 cursor-pointer place-items-center rounded-xl border border-line shadow-sm transition-transform hover:scale-105 active:scale-95"
+          style={{ background: activeColor }}
+        >
+          <input
+            type="color"
+            value={activeColor.startsWith("#") && activeColor.length === 7 ? activeColor : "#1B2236"}
+            onChange={(e) => onColorPickerChange(e.target.value)}
+            className="sr-only"
+          />
+          <Pipette className={clsx("size-4 opacity-0 transition-opacity group-hover:opacity-100", isLight(activeColor) ? "text-ink" : "text-white")} />
+        </label>
+
+        {/* Color Name text input */}
+        <input
+          {...reg}
+          placeholder="e.g. Brown, Black"
+          className="input h-10 min-h-0 flex-1 text-sm"
+          aria-invalid={!!error}
+          onChange={(e) => {
+            reg.onChange(e);
+            const text = e.target.value;
+            const match = swatch(text);
+            if (match && match.startsWith("#")) {
+              setValue(`variants.${i}.options.${optName}Hex` as `variants.${number}.name`, match, { shouldDirty: true });
+              setValue(`variants.${i}.options.ColorHex` as `variants.${number}.name`, match, { shouldDirty: true });
+            }
+          }}
+        />
+
+        {/* Hidden inputs to preserve Hex in form values */}
+        <input type="hidden" {...register(`variants.${i}.options.${optName}Hex` as `variants.${number}.name`)} />
+        <input type="hidden" {...register(`variants.${i}.options.ColorHex` as `variants.${number}.name`)} />
+      </div>
+
+      {/* Preset Swatches Palette */}
+      {showPresets && (
+        <div className="mt-2 rounded-2xl bg-white p-2.5 shadow-[var(--shadow-card)] ring-1 ring-line">
+          <p className="mb-1.5 text-[11px] font-semibold text-slate">Popular colors:</p>
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+            {PRESET_COLORS.map((p) => {
+              const isSelected = colorVal.toLowerCase() === p.name.toLowerCase() || hexVal.toLowerCase() === p.hex.toLowerCase();
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  title={`${p.name} (${p.hex})`}
+                  onClick={() => selectPreset(p)}
+                  className={clsx(
+                    "flex flex-col items-center gap-1 rounded-lg p-1 transition hover:bg-paper",
+                    isSelected && "ring-2 ring-electric bg-paper"
+                  )}
+                >
+                  <span
+                    className="size-6 rounded-full border border-black/15 shadow-sm"
+                    style={{ background: p.hex }}
+                  />
+                  <span className="text-[10px] leading-tight text-ink-2 truncate max-w-full font-medium">
+                    {p.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VariantRow({
+  i,
+  register,
+  control,
+  setValue,
+  optionNames,
+  errors,
+  onRemove,
+}: {
+  i: number;
+  register: UseFormRegister<EditorValues>;
+  control: Control<EditorValues>;
+  setValue: UseFormSetValue<EditorValues>;
+  optionNames: string[];
+  errors: Record<string, string>;
+  onRemove?: () => void;
+}) {
   const active = useWatch({ control, name: `variants.${i}.is_active` });
   const e = (k: string) => errors[`variants.${i}.${k}`];
   return (
@@ -219,9 +371,28 @@ function VariantRow({ i, register, control, optionNames, errors, onRemove }: { i
         <label className="sm:col-span-2"><span className="text-xs text-slate">SKU</span><input {...register(`variants.${i}.sku`)} className="input h-10 min-h-0 font-mono text-sm uppercase" aria-invalid={!!e("sku")} />{e("sku") && <span className="field-error block">{e("sku")}</span>}</label>
         <label><span className="text-xs text-slate">Stock</span><input {...register(`variants.${i}.stock`, { valueAsNumber: true })} type="number" min={0} className="input h-10 min-h-0" /></label>
         <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" {...register(`variants.${i}.is_active`)} className="size-4 accent-electric" /> Active</label>
-        {optionNames.map((o) => (
-          <label key={o} className="sm:col-span-2"><span className="text-xs text-slate">{o}</span><input {...register(`variants.${i}.options.${o}` as `variants.${number}.name`)} className="input h-10 min-h-0" aria-invalid={!!e("options")} /></label>
-        ))}
+        {optionNames.map((o) => {
+          const isColor = /^colou?r$/i.test(o) || o.toLowerCase().includes("color") || o.toLowerCase().includes("colour") || o.includes("রং");
+          if (isColor) {
+            return (
+              <ColorOptionField
+                key={o}
+                i={i}
+                optName={o}
+                control={control}
+                register={register}
+                setValue={setValue}
+                error={e("options")}
+              />
+            );
+          }
+          return (
+            <label key={o} className="sm:col-span-2">
+              <span className="text-xs text-slate">{o}</span>
+              <input {...register(`variants.${i}.options.${o}` as `variants.${number}.name`)} className="input h-10 min-h-0" aria-invalid={!!e("options")} />
+            </label>
+          );
+        })}
         <label><span className="text-xs text-slate">Price override</span><input {...register(`variants.${i}.price`)} inputMode="decimal" placeholder="—" className="input h-10 min-h-0" /></label>
         <label><span className="text-xs text-slate">Sale override</span><input {...register(`variants.${i}.sale_price`)} inputMode="decimal" placeholder="—" className="input h-10 min-h-0" />{e("sale_price") && <span className="field-error block">{e("sale_price")}</span>}</label>
       </div>

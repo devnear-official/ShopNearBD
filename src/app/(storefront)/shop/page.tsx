@@ -16,11 +16,21 @@ export const metadata: Metadata = {
 
 export default function ShopPage({ searchParams }: { searchParams: Promise<ShopSearchParams> }) {
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-8">
-      <header className="relative mb-6">
-        <p className="eyebrow flex items-center gap-3 text-electric"><Streaks className="h-3.5 w-7" /> The whole shop</p>
-        <h1 className="display mt-3 t-page">Everything, <span className="text-gradient">nearby.</span></h1>
-        <p className="bn mt-2 text-base sm:text-lg text-slate" lang="bn">সব পণ্য এক জায়গায়</p>
+    <div className="mx-auto max-w-7xl px-4 pt-2 sm:px-8 sm:pt-6">
+      <header className="relative mb-2.5 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 sm:gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-electric/10 px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-wider text-electric">
+                <Streaks className="h-2 w-4" /> The whole shop
+              </span>
+              <span className="bn text-xs text-slate font-medium" lang="bn">সব পণ্য এক জায়গায়</span>
+            </div>
+            <h1 className="font-display mt-1 text-xl font-extrabold tracking-tight text-ink sm:text-3xl">
+              Everything, <span className="text-gradient">nearby.</span>
+            </h1>
+          </div>
+        </div>
       </header>
       <Suspense fallback={<><div className="h-28" /><ProductGridSkeleton /></>}>
         <Results searchParams={searchParams} />
@@ -40,12 +50,30 @@ async function Results({ searchParams }: { searchParams: Promise<ShopSearchParam
       <ShopFilters query={query} categories={categories} total={total} />
       {query.q && <TrackSearch q={query.q} results={total} />}
       {cat && (
-        <div className="mb-2 mt-6 rounded-[2rem] p-6 text-white" style={{ background: cat.accent ?? "#1E6BFF" }}>
-          <h2 className="display t-section">{cat.name} {cat.name_bn && <span className="bn ml-2 text-2xl font-semibold opacity-80" lang="bn">{cat.name_bn}</span>}</h2>
-          {cat.description && <p className="mt-2 max-w-xl text-white/85">{cat.description}</p>}
+        <div
+          className="mb-2 mt-3 rounded-2xl px-4 py-2.5 sm:mb-4 sm:mt-6 sm:rounded-[2rem] sm:p-6 text-white shadow-sm transition-all"
+          style={{ background: cat.accent ?? "#1E6BFF" }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="flex flex-wrap items-baseline gap-x-2 text-base font-extrabold sm:text-2xl">
+                <span>{cat.name}</span>
+                {cat.name_bn && (
+                  <span className="bn text-xs font-medium text-white/85 sm:text-lg" lang="bn">
+                    ({cat.name_bn})
+                  </span>
+                )}
+              </h2>
+              {cat.description && (
+                <p className="mt-0.5 line-clamp-1 text-xs text-white/85 sm:mt-1 sm:line-clamp-none sm:text-sm">
+                  {cat.description}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
-      <div className="mt-6">
+      <div className="mt-3 sm:mt-6">
         {items.length ? (
           <ProductGrid items={items} featureFirst={query.page === 1 && !query.q && !query.sort} />
         ) : (

@@ -27,7 +27,7 @@ export type SmsTemplates = Record<SmsEvent, string>;
 export async function smsTemplates(): Promise<{ templates: SmsTemplates; enabled: Record<SmsEvent, boolean> }> {
   const [row] = await system((tx) => tx<{ value: { templates?: Partial<SmsTemplates>; disabled?: SmsEvent[] } }[]>`select value from public.site_settings where key = 'sms_templates'`);
   const t = row?.value?.templates ?? {};
-  const off = new Set(row?.value?.disabled ?? []);
+  const off = new Set(row?.value?.disabled ?? ["placed", "processing", "shipped", "out_for_delivery", "delivered", "cancelled"]);
   return {
     templates: Object.fromEntries(SMS_EVENTS.map((e) => [e, (typeof t[e] === "string" && t[e]!.trim()) || DEFAULT_TEMPLATES[e]])) as SmsTemplates,
     enabled: Object.fromEntries(SMS_EVENTS.map((e) => [e, !off.has(e)])) as Record<SmsEvent, boolean>,

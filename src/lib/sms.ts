@@ -5,9 +5,10 @@ import { system } from "./db";
  * SMS gateways used in Bangladesh. Set SMS_PROVIDER and that provider's keys:
  * - bulksmsbd:   BULKSMSBD_API_KEY, BULKSMSBD_SENDER_ID   (bulksmsbd.net)
  * - sslwireless: SSL_SMS_API_TOKEN, SSL_SMS_SID            (SSL Wireless SMS Plus)
+ * - mram:        MRAM_SMS_API_KEY, MRAM_SMS_SENDER_ID      (msg.mram.com.bd)
  * - console:     development/testing only; nothing is sent, messages go to dev_sms_outbox.
  */
-export type SmsProvider = "bulksmsbd" | "sslwireless" | "console";
+export type SmsProvider = "bulksmsbd" | "sslwireless" | "mram" | "console";
 export type SmsResult = { ok: boolean; provider: SmsProvider | "none"; detail?: string };
 
 const devAllowed = () => process.env.NODE_ENV !== "production" || process.env.ALLOW_DEV_SMS === "1";
@@ -16,6 +17,7 @@ export function smsProvider(): SmsProvider | null {
   const p = (process.env.SMS_PROVIDER ?? "").trim().toLowerCase();
   if (p === "bulksmsbd" && process.env.BULKSMSBD_API_KEY && process.env.BULKSMSBD_SENDER_ID) return "bulksmsbd";
   if (p === "sslwireless" && process.env.SSL_SMS_API_TOKEN && process.env.SSL_SMS_SID) return "sslwireless";
+  if (p === "mram" && process.env.MRAM_SMS_API_KEY && process.env.MRAM_SMS_SENDER_ID) return "mram";
   if (p === "console" && devAllowed()) return "console";
   if (!p && devAllowed() && process.env.NODE_ENV !== "production") return "console";
   return null;
@@ -55,14 +57,54 @@ async function deliver(provider: SmsProvider, phone: string, body: string): Prom
     const code = String(r.json.response_code ?? "");
     return { ok: code === "202", provider, detail: `${code} ${String(r.json.success_message ?? r.json.error_message ?? "")}`.trim().slice(0, 200) };
   }
-  const base = (process.env.SSL_SMS_BASE_URL ?? "https://smsplus.sslwireless.com").replace(/\/$/, "");
-  const r = await post(`${base}/api/v3/send-sms`, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ api_token: process.env.SSL_SMS_API_TOKEN, sid: process.env.SSL_SMS_SID, msisdn: msisdn(phone), sms: body, csms_id: `sn${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` }),
-  });
-  const ok = r.status >= 200 && r.status < 300 && r.json.status === "SUCCESS";
-  return { ok, provider, detail: `${r.json.status_code ?? r.status} ${String(r.json.error_message ?? r.json.status ?? "")}`.trim().slice(0, 200) };
+  if (provider === "sslwireless") {
+    const base = (process.env.SSL_SMS_BASE_URL ?? "https://smsplus.sslwireless.com").replace(/\/$/, "");
+    const r = await post(`${base}/api/v3/send-sms`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ api_token: process.env.SSL_SMS_API_TOKEN, sid: process.env.SSL_SMS_SID, msisdn: msisdn(phone), sms: body, csms_id: `sn${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` }),
+    });
+    const ok = r.status >= 200 && r.status < 300 && r.json.status === "SUCCESS";
+    return { ok, provider, detail: `${r.json.status_code ?? r.status} ${String(r.json.error_message ?? r.json.status ?? "")}`.trim().slice(0, 200) };
+  }
+  if (provider === "mram") {
+    const base = (process.env.MRAM_SMS_BASE_URL ?? "https://msg.mram.com.bd").replace(/\/$/, "");
+    const isUnicode = /[^\x00-\x7f]/.test(body);
+    const r = await post(`${base}/smsapi`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        api_key: process.env.MRAM_SMS_API_KEY!,
+        type: isUnicode ? "unicode" : "text",
+        contacts: msisdn(phone),
+        senderid: process.env.MRAM_SMS_SENDER_ID!,
+        msg: body,
+      }),
+    });
+    const raw = typeof r.json.raw === "string" ? r.json.raw.trim() : JSON.stringify(r.json);
+    const isError = /^(100[1-9]|101[0-9]|1020)\b/.test(raw) || (r.json.status && String(r.json.status).toLowerCase() === "failed");
+    const ok = r.status >= 200 && r.status < 300 && !isError;
+    const errorMap: Record<string, string> = {
+      "1002": "Sender Id/Masking Not Found",
+      "1003": "API Not Found",
+      "1004": "SPAM Detected",
+      "1005": "Internal Error",
+      "1006": "Internal Error",
+      "1007": "Balance Insufficient",
+      "1008": "Message is empty",
+      "1009": "Message Type Not Set",
+      "1010": "Invalid User & Password",
+      "1011": "Invalid User Id",
+      "1012": "Invalid Number",
+      "1013": "API limit error",
+      "1014": "No matching template",
+      "1015": "SMS Content Validation Fails",
+      "1016": "IP address not allowed",
+    };
+    const detail = isError ? (errorMap[raw] ?? String(r.json.message ?? raw)) : String(r.json.message ?? raw);
+    return { ok, provider, detail: detail.slice(0, 200) };
+  }
+  return { ok: false, provider, detail: "Unsupported provider" };
 }
 
 /** Sends one SMS and logs the outcome (never the message text). Never throws. */

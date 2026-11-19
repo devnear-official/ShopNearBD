@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
-import { ArrowUp, Headset, Loader2, X } from "lucide-react";
+import { ArrowUp, Bot, Headset, Loader2, X } from "lucide-react";
 import clsx from "clsx";
 import { useDialog } from "@/hooks/use-dialog";
 
@@ -15,7 +15,7 @@ const QUICK = ["Delivery charge koto?", "bKash e payment kivabe korbo?", "Where 
 const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) ?? undefined; } catch { return undefined; } };
 const savedOrders = () => { try { return (JSON.parse(localStorage.getItem("sn_orders") ?? "[]") as { number: string; token: string }[]).slice(0, 5).map(({ number, token }) => ({ number, token })); } catch { return []; } };
 
-export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting: string; autoOpen?: boolean }) {
+export function ChatWidget({ greeting: fallbackGreeting, autoOpen, hideLauncher = true }: { greeting: string; autoOpen?: boolean; hideLauncher?: boolean }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [greeting, setGreeting] = useState(fallbackGreeting);
@@ -96,6 +96,29 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
     list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" });
   }, [messages, sending, open]);
 
+  const switchBackToAi = async () => {
+    if (sending) return;
+    setError(null);
+    setSending(true);
+    try {
+      const token = getToken();
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { "x-chat-token": token } : {}) },
+        body: JSON.stringify({ message: "", backToAi: true, orders: savedOrders() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Something went wrong.");
+      try { localStorage.setItem(TOKEN_KEY, d.token); } catch {}
+      setMode(d.mode);
+      await poll();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const send = async (content: string, human = false) => {
     const body = content.trim();
     if ((!body && !human) || sending) return;
@@ -127,7 +150,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
   return (
     <>
       <AnimatePresence>
-        {!open && (
+        {!open && !hideLauncher && (
           <m.button
             type="button"
             onClick={openChat}
@@ -136,7 +159,7 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
             aria-label={unread ? "Open chat — new reply from our team" : "Chat with us"}
             data-chat-launcher
             className={clsx("group fixed right-4 z-40 h-14 items-center gap-2 rounded-full bg-ink pl-2 pr-2 text-white shadow-[0_18px_40px_-14px_rgba(11,21,48,.7)] sm:flex sm:pr-5", onCheckout ? "hidden" : "flex")}
-            style={{ bottom: "calc(1rem + env(safe-area-inset-bottom) + var(--sticky-bar, 0px))" }}
+            style={{ bottom: "calc(1rem + env(safe-area-inset-bottom) + var(--sticky-bar, 0px) + var(--bottom-nav-offset, 0px))" }}
           >
             <span className="relative grid size-10 place-items-center rounded-full bg-gradient-to-br from-tangerine to-flame">
               <BagMark />
@@ -190,11 +213,17 @@ export function ChatWidget({ greeting: fallbackGreeting, autoOpen }: { greeting:
             </div>
 
             <div className="pb-safe border-t border-line bg-white px-3 pt-3">
-              {mode === "ai" && (
-                <button type="button" onClick={() => send("", true)} disabled={sending} className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-ink">
-                  <Headset className="size-3.5" /> Talk to a person
-                </button>
-              )}
+              <div className="mb-2 flex items-center justify-between">
+                {mode === "ai" ? (
+                  <button type="button" onClick={() => send("", true)} disabled={sending} className="flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-ink">
+                    <Headset className="size-3.5" /> Talk to a person
+                  </button>
+                ) : (
+                  <button type="button" onClick={switchBackToAi} disabled={sending} className="flex items-center gap-1.5 text-xs font-semibold text-electric hover:underline">
+                    <Bot className="size-3.5" /> Switch back to AI Assistant / সহকারী চালু করুন
+                  </button>
+                )}
+              </div>
               <form onSubmit={(e) => { e.preventDefault(); void send(text); }} className="flex items-end gap-2">
                 <label htmlFor="chat-input" className="sr-only">Your message</label>
                 <textarea id="chat-input" data-autofocus value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={1000}

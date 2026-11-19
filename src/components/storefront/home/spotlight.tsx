@@ -7,7 +7,7 @@ import * as m from "motion/react-m";
 import { ArrowRight, Check, ShoppingBag, Truck } from "lucide-react";
 import type { ProductCard } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
-import { swatch } from "@/lib/colors";
+import { swatch, resolveVariantColor } from "@/lib/colors";
 import { Price } from "@/components/ui/price";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -42,7 +42,7 @@ export function Spotlight({ product, specs }: { product: ProductCard; specs: { l
           {product.variants.map((v) => (
             <button key={v.id} type="button" onClick={() => setVariant(v)} aria-pressed={v.id === variant.id} aria-label={v.name}
               className={`grid size-10 place-items-center rounded-full transition ${v.id === variant.id ? "ring-2 ring-electric" : ""}`}>
-              <span className="size-6 rounded-full ring-1 ring-ink/10" style={{ background: swatch(v.options.Color ?? v.name) }} />
+              <span className="size-6 rounded-full ring-1 ring-ink/10" style={{ background: resolveVariantColor(v.options, v.name) }} />
             </button>
           ))}
         </div>

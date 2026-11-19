@@ -12,6 +12,7 @@ import { requestContext, sendPurchase, trackingConfig } from "@/lib/tracking/ser
 import { buildAttribution, saveAttribution } from "@/lib/tracking/attribution";
 import { ensureAccount } from "@/lib/customer/auth";
 import { notifyOrderEvent } from "@/lib/order-sms";
+import { notifyNewOrderEmail } from "@/lib/order-email";
 
 export type QuoteLine = { variant_id: string; sku?: string; product_id: string; slug: string; name: string; variant_name: string; unit_price: number; quantity: number; line_total: number; stock: number; image_url: string | null };
 export type Quote = {
@@ -110,6 +111,7 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
       // Every phone that orders gets an account; logging in with an SMS code later shows all its orders.
       await ensureAccount(delivery.phone, delivery.name);
       after(() => notifyOrderEvent(orderId, "placed"));
+      after(() => notifyNewOrderEmail(orderId));
       after(async () => {
         const cfg = await trackingConfig();
         if (cfg.purchaseTrigger === "placed") await sendPurchase(orderId, { ...ctx, ttclid: attr.ttclid ?? null, referrer: attr.referrer ?? null });

@@ -274,7 +274,7 @@ function TrackingTab({ v, secrets, events }: { v: TrackingSettingsRow; secrets?:
 
 function SmsTab({ log }: { log: SmsRow[] }) {
   const provider = smsProvider();
-  const label = provider === "bulksmsbd" ? `BulkSMSBD (sender ID ${process.env.BULKSMSBD_SENDER_ID})` : provider === "sslwireless" ? `SSL Wireless (SID ${process.env.SSL_SMS_SID})` : provider === "console" ? "Development outbox — no real SMS is sent" : null;
+  const label = provider === "mram" ? `MRAM Technologies (sender ID ${process.env.MRAM_SMS_SENDER_ID})` : provider === "bulksmsbd" ? `BulkSMSBD (sender ID ${process.env.BULKSMSBD_SENDER_ID})` : provider === "sslwireless" ? `SSL Wireless (SID ${process.env.SSL_SMS_SID})` : provider === "console" ? "Development outbox — no real SMS is sent" : null;
   return (
     <div className="space-y-4">
       <Card title="Customer accounts">
@@ -284,7 +284,7 @@ function SmsTab({ log }: { log: SmsRow[] }) {
         <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate">
           <li>Every phone number that orders gets an account automatically. Customers log in at <span className="font-mono">/account/login</span> with a 6-digit code sent by SMS — no password — and see every order on their number, its status and their total.</li>
           <li>Codes expire after 5 minutes and allow 5 tries. Limits: 1 code per number per minute, 5 per number and 10 per device per hour, 300 per hour store-wide (protects your SMS balance).</li>
-          <li>Set the gateway with environment variables on the server: <span className="font-mono">SMS_PROVIDER=bulksmsbd</span> + <span className="font-mono">BULKSMSBD_API_KEY</span>, <span className="font-mono">BULKSMSBD_SENDER_ID</span> — or <span className="font-mono">SMS_PROVIDER=sslwireless</span> + <span className="font-mono">SSL_SMS_API_TOKEN</span>, <span className="font-mono">SSL_SMS_SID</span>. Some gateways need your server&apos;s IP whitelisted.</li>
+          <li>Set the gateway with environment variables on the server: <span className="font-mono">SMS_PROVIDER=mram</span> + <span className="font-mono">MRAM_SMS_API_KEY</span>, <span className="font-mono">MRAM_SMS_SENDER_ID</span> — or <span className="font-mono">SMS_PROVIDER=bulksmsbd</span> + <span className="font-mono">BULKSMSBD_API_KEY</span>, <span className="font-mono">BULKSMSBD_SENDER_ID</span> — or <span className="font-mono">SMS_PROVIDER=sslwireless</span> + <span className="font-mono">SSL_SMS_API_TOKEN</span>, <span className="font-mono">SSL_SMS_SID</span>. Some gateways need your server&apos;s IP whitelisted.</li>
         </ul>
       </Card>
       <Card title="Recent SMS">

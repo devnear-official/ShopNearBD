@@ -9,7 +9,7 @@ import clsx from "clsx";
 import type { ProductCard as Product, Variant } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
 import { formatTaka, percentOff } from "@/lib/format";
-import { swatch, isLight } from "@/lib/colors";
+import { swatch, isLight, resolveVariantColor } from "@/lib/colors";
 import { cart } from "@/components/cart/cart-store";
 import { WishlistButton } from "./wishlist";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -34,7 +34,8 @@ export function ProductCard({ product, priority, className, tone = "light", larg
   const stock = variant?.stock ?? 0;
   const soldOut = product.total_stock <= 0;
   const low = !soldOut && stock > 0 && stock <= product.low_stock_threshold;
-  const colorOpt = product.option_names.includes("Color") && product.variants.length > 1;
+  const colorOptName = product.option_names.find((n) => /^colou?r$/i.test(n) || n.toLowerCase().includes("color") || n.toLowerCase().includes("colour") || n.includes("রং"));
+  const colorOpt = Boolean(colorOptName) && product.variants.length > 1;
   const otherOpt = !colorOpt && product.variants.length > 1;
   const href = `/shop/${product.slug}`;
   const dark = tone === "dark";
@@ -134,9 +135,9 @@ export function ProductCard({ product, priority, className, tone = "light", larg
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5" role="group" aria-label={`${product.name} options`}>
             {product.variants.map((v) => {
               const selected = v.id === variant?.id;
-              const label = colorOpt ? v.options.Color ?? v.name : v.name;
+              const label = (colorOptName ? v.options[colorOptName] : null) ?? (colorOpt ? v.options.Color : null) ?? v.name;
               if (colorOpt) {
-                const c = swatch(label);
+                const c = resolveVariantColor(v.options, label, colorOptName);
                 return (
                   <button key={v.id} type="button" onClick={() => setVariant(v)} aria-pressed={selected} aria-label={`${label}${v.stock <= 0 ? " (sold out)" : ""}`} title={label}
                     className={clsx("relative grid size-10 place-items-center rounded-full transition", selected ? "ring-2 ring-electric ring-offset-2" : "ring-1 ring-ink/10 hover:scale-110", dark && "ring-offset-ink")}>

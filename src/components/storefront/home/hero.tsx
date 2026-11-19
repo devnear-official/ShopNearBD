@@ -15,13 +15,15 @@ import { BagArt, CartArt, GiftBox, Parcel } from "./hero-art";
  * Hero: the copy on the left, and on the right a drawn scene of a phone-first store with a
  * loaded cart that rolls in and keeps moving. On desktop the layers drift with the cursor.
  */
-export function Hero({ copy, hero }: { copy: HomepageSettings; hero: ProductCard | null }) {
+export function Hero({ copy, hero, heroes }: { copy: HomepageSettings; hero?: ProductCard | null; heroes?: ProductCard[] }) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const sx = useSpring(mx, { stiffness: 60, damping: 18 });
   const sy = useSpring(my, { stiffness: 60, damping: 18 });
+
+  const productList = heroes && heroes.length > 0 ? heroes : hero ? [hero] : [];
 
   useEffect(() => {
     if (reduce || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -46,7 +48,7 @@ export function Hero({ copy, hero }: { copy: HomepageSettings; hero: ProductCard
   const was = hero && hero.sale_price ? hero.price : null;
 
   return (
-    <section ref={ref} className="relative isolate overflow-hidden px-4 pb-10 pt-6 sm:px-8 lg:pb-16 lg:pt-8">
+    <section ref={ref} className="relative isolate overflow-hidden px-4 pb-10 pt-2 sm:pt-4 sm:px-8 lg:pb-16 lg:pt-8">
       {/* the big blue wave behind the scene (desktop) */}
       <svg aria-hidden viewBox="0 0 800 700" preserveAspectRatio="none" className="absolute inset-y-0 right-0 -z-10 hidden h-full w-[58%] lg:block">
         <defs>
@@ -59,7 +61,7 @@ export function Hero({ copy, hero }: { copy: HomepageSettings; hero: ProductCard
       <div aria-hidden className="absolute -left-40 top-60 -z-10 size-[30rem] rounded-full bg-[radial-gradient(closest-side,#d8f4ff,transparent)]" />
 
       <div className="mx-auto grid max-w-7xl items-center gap-6 lg:grid-cols-[1fr_1.05fr] lg:gap-2">
-        <div className="relative z-10 pt-4 lg:pt-0">
+        <div className="relative z-10 pt-0">
           <p className="enter eyebrow inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-electric shadow-[var(--shadow-card)]">
             <MapPin className="size-3.5" /> {copy.hero_eyebrow}
           </p>
@@ -75,15 +77,32 @@ export function Hero({ copy, hero }: { copy: HomepageSettings; hero: ProductCard
           <p className="enter mt-8 max-w-lg [--d:200ms] text-base sm:text-lg leading-relaxed text-slate">
             {copy.hero_subtitle}
           </p>
-          <div className="enter mt-8 flex flex-wrap items-center gap-3 [--d:280ms]">
-            <ButtonLink href="/shop" size="lg">Shop now <ArrowRight className="size-5 transition-transform group-hover/btn:translate-x-1" /></ButtonLink>
-            <ButtonLink href={`/shop?collection=${copy.campaign_collection}`} variant="ghost" size="lg">Explore {copy.campaign_title}</ButtonLink>
+          {/* CTA Buttons: placed in a single row right below the text on both mobile and desktop */}
+          <div className="enter mt-5 flex items-center gap-2.5 sm:gap-3 [--d:280ms]">
+            <ButtonLink href="/shop" size="md" className="shrink-0 px-4 sm:px-6 text-xs min-[380px]:text-sm sm:text-[0.95rem]">
+              Shop now <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-1" />
+            </ButtonLink>
+            <ButtonLink href={`/shop?collection=${copy.campaign_collection}`} variant="ghost" size="md" className="shrink-0 px-3.5 sm:px-5 text-xs min-[380px]:text-sm sm:text-[0.95rem]">
+              Explore {copy.campaign_title}
+            </ButtonLink>
           </div>
+          {/* Desktop promises & dispatch clock */}
+          <div className="hidden lg:block">
+            <Promises />
+            <DispatchClock />
+          </div>
+        </div>
+
+        {/* Scene / cart animation: appears below the CTA buttons on mobile */}
+        <div className="relative">
+          <Scene heroes={productList} sx={sx} sy={sy} reduce={Boolean(reduce)} />
+        </div>
+
+        {/* Mobile secondary info: promises & dispatch clock placed below the scene on mobile */}
+        <div className="relative z-10 lg:hidden">
           <Promises />
           <DispatchClock />
         </div>
-
-        <Scene hero={hero} img={img} price={price} was={was} sx={sx} sy={sy} reduce={Boolean(reduce)} />
       </div>
     </section>
   );
@@ -129,7 +148,7 @@ const CATS = [
  * Sizes inside the scene are in `cqw` (1% of the scene's width) so the whole composition
  * scales as one picture from a 360 px phone to a wide desktop.
  */
-function Scene({ hero, img, price, was, sx, sy, reduce }: { hero: ProductCard | null; img?: ProductCard["images"][number]; price?: number; was: number | null; sx: MotionValue<number>; sy: MotionValue<number>; reduce: boolean }) {
+function Scene({ heroes, sx, sy, reduce }: { heroes: ProductCard[]; sx: MotionValue<number>; sy: MotionValue<number>; reduce: boolean }) {
   return (
     <div className="relative mx-auto aspect-[1/1.02] w-full max-w-[38rem] [container-type:inline-size]">
       {/* mobile backdrop; on desktop the page-wide wave does this job */}
@@ -164,24 +183,114 @@ function Scene({ hero, img, price, was, sx, sy, reduce }: { hero: ProductCard | 
         <div className="flex items-end gap-[6%]"><div className="hero-float w-[62%] -rotate-6" style={{ "--fd": "0.3s", "--fa": "4px" } as CSSProperties}><Parcel /></div><div className="hero-float w-[48%] rotate-6" style={{ "--fd": "1.1s", "--fa": "4px" } as CSSProperties}><GiftBox /></div></div>
       </Layer>
 
-      {/* floating chips */}
+      {/* floating chips and product cards */}
       <Layer sx={sx} sy={sy} depth={34} reduce={reduce} className="absolute inset-0 z-30">
-        <Chip className="left-[1%] top-[19%]" delay="0s" tint="bg-electric" icon={<Truck className="size-[55%]" />}>Wide Range<br />of Products</Chip>
-        <Chip className="right-[-2%] top-[7%]" delay="0.9s" tint="bg-tangerine" icon={<Percent className="size-[55%]" />}>Great<br />Deals</Chip>
-        <Chip className="right-[-3%] top-[58%]" delay="1.6s" tint="bg-mint" icon={<ShieldCheck className="size-[55%]" />}>Trusted<br />Shopping</Chip>
-        <span aria-hidden className="hero-float absolute right-[8%] top-[40%] grid size-[9cqw] place-items-center rounded-[2.2cqw] rounded-bl-[0.6cqw] bg-gradient-to-br from-rose to-flame text-white shadow-[0_1.5cqw_3cqw_-1cqw_rgb(244_63_94/0.7)]" style={{ "--fd": "0.4s" } as CSSProperties}><Heart className="size-[5.4cqw] fill-white" /></span>
+        {/* Card 1 (Top-Left): Featured Product */}
+        {heroes[0] && (
+          <FloatingProductCard
+            product={heroes[0]}
+            badge="Featured"
+            badgeColor="text-electric"
+            className="left-[0%] top-[1%]"
+            delay="0s"
+          />
+        )}
 
-        {hero && img && (
-          <IntentLink href={`/shop/${hero.slug}`} className="pop-in absolute left-[0%] top-[1%] flex max-w-[43%] items-center gap-[1.6cqw] rounded-[2.4cqw] bg-white p-[1.2cqw] pr-[2.2cqw] shadow-[var(--shadow-float)] transition hover:scale-105 [--d:900ms]" aria-label={`Featured: ${hero.name}`}>
-            <span className="relative block size-[9cqw] shrink-0 overflow-hidden rounded-[1.6cqw] bg-cloud"><Image src={img.url} alt="" fill priority sizes="64px" className="object-cover" /></span>
-            <span className="min-w-0">
-              <span className="block text-[2.1cqw] font-bold uppercase tracking-wider text-electric">Featured</span>
-              <span className="block truncate text-[2.8cqw] font-semibold leading-tight">{hero.name}</span>
-              <span className="flex items-baseline gap-[1cqw] text-[3cqw] font-extrabold leading-tight text-tangerine">{formatTaka(price)}{was ? <s className="text-[2.2cqw] font-medium text-mist">{formatTaka(was)}</s> : null}</span>
-            </span>
-          </IntentLink>
+        {/* Card 2 (Top-Right): Hot Deal or Chip fallback */}
+        {heroes[1] ? (
+          <FloatingProductCard
+            product={heroes[1]}
+            badge="Hot Deal"
+            badgeColor="text-tangerine"
+            className="right-[-2%] top-[5%]"
+            delay="0.8s"
+          />
+        ) : (
+          <Chip className="right-[-2%] top-[7%]" delay="0.9s" tint="bg-tangerine" icon={<Percent className="size-[55%]" />}>Great<br />Deals</Chip>
+        )}
+
+        {/* Card 3 (Mid-Left): New Arrival or Chip fallback */}
+        {heroes[2] ? (
+          <FloatingProductCard
+            product={heroes[2]}
+            badge="New"
+            badgeColor="text-mint"
+            className="left-[0%] top-[23%]"
+            delay="1.4s"
+          />
+        ) : (
+          <Chip className="left-[1%] top-[19%]" delay="0s" tint="bg-electric" icon={<Truck className="size-[55%]" />}>Wide Range<br />of Products</Chip>
+        )}
+
+        {/* Floating Heart Accent */}
+        <span
+          aria-hidden
+          className="hero-float absolute right-[7%] top-[34%] grid size-[8.5cqw] place-items-center rounded-[2.2cqw] rounded-bl-[0.6cqw] bg-gradient-to-br from-rose to-flame text-white shadow-[0_1.5cqw_3cqw_-1cqw_rgb(244_63_94/0.7)]"
+          style={{ "--fd": "0.4s" } as CSSProperties}
+        >
+          <Heart className="size-[5cqw] fill-white" />
+        </span>
+
+        {/* Card 4 (Mid-Right): Trending or Chip fallback */}
+        {heroes[3] ? (
+          <FloatingProductCard
+            product={heroes[3]}
+            badge="Trending"
+            badgeColor="text-rose"
+            className="right-[-2%] top-[50%]"
+            delay="2.0s"
+          />
+        ) : (
+          <Chip className="right-[-3%] top-[58%]" delay="1.6s" tint="bg-mint" icon={<ShieldCheck className="size-[55%]" />}>Trusted<br />Shopping</Chip>
         )}
       </Layer>
+    </div>
+  );
+}
+
+function FloatingProductCard({
+  product,
+  badge,
+  badgeColor,
+  className,
+  delay,
+}: {
+  product: ProductCard;
+  badge: string;
+  badgeColor: string;
+  className: string;
+  delay: string;
+}) {
+  const img = product.images?.[0];
+  if (!img) return null;
+  const price = product.min_price;
+  const was = product.sale_price ? product.price : null;
+
+  return (
+    <div className={`absolute z-30 max-w-[44cqw] ${className}`}>
+      <div className="hero-float" style={{ "--fd": delay, "--fa": "6px" } as CSSProperties}>
+        <IntentLink
+          href={`/shop/${product.slug}`}
+          className="pop-in flex items-center gap-[1.5cqw] rounded-[2.2cqw] bg-white/95 p-[1.1cqw] pr-[2.2cqw] shadow-[var(--shadow-float)] ring-1 ring-ink/5 backdrop-blur-sm transition duration-300 hover:scale-105 hover:bg-white [--d:250ms]"
+          aria-label={`${badge}: ${product.name}`}
+        >
+          <span className="relative block size-[8.8cqw] shrink-0 overflow-hidden rounded-[1.6cqw] bg-cloud">
+            <Image src={img.url} alt="" fill priority sizes="80px" className="object-cover" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={`block text-[1.9cqw] font-bold uppercase tracking-wider ${badgeColor}`}>
+              {badge}
+            </span>
+            <span className="block truncate text-[2.6cqw] font-semibold leading-tight text-ink">
+              {product.name}
+            </span>
+            <span className="flex items-baseline gap-[1cqw] text-[2.9cqw] font-extrabold leading-tight text-tangerine">
+              {formatTaka(price)}
+              {was ? <s className="text-[2.1cqw] font-medium text-mist">{formatTaka(was)}</s> : null}
+            </span>
+          </span>
+        </IntentLink>
+      </div>
     </div>
   );
 }

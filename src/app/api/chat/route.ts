@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
 const body = z.object({
   message: z.string().max(2000).default(""),
   human: z.boolean().optional(),
+  backToAi: z.boolean().optional(),
   orders: z.array(z.object({ number: z.string().max(20), token: z.string().max(200) })).max(5).default([]),
 });
 
@@ -28,7 +29,15 @@ export async function POST(req: NextRequest) {
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid message." }, { status: 400, headers: noStore });
   try {
-    const r = await sendMessage({ token: req.headers.get("x-chat-token") ?? undefined, message: parsed.data.message, orders: parsed.data.orders, wantHuman: parsed.data.human, ipHash: await clientIpHash(), customerPhone: (await currentCustomer())?.phone ?? null });
+    const r = await sendMessage({
+      token: req.headers.get("x-chat-token") ?? undefined,
+      message: parsed.data.message,
+      orders: parsed.data.orders,
+      wantHuman: parsed.data.human,
+      backToAi: parsed.data.backToAi,
+      ipHash: await clientIpHash(),
+      customerPhone: (await currentCustomer())?.phone ?? null,
+    });
     if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status, headers: noStore });
     return NextResponse.json(r, { headers: noStore });
   } catch (e) {

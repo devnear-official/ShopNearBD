@@ -12,12 +12,38 @@ export const SOCIALS = [
 ] as const;
 export type SocialKey = (typeof SOCIALS)[number]["key"];
 
-/** The configured Messenger link, only if it is an https link to a Messenger/Facebook host (admin text is not trusted blindly). */
+/** The configured Messenger link, formatted to directly open the Messenger chat (m.me/username). */
 export function messengerLink(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // If user entered just username (e.g. "shopnearbd" or "@shopnearbd")
+  if (/^@?[a-zA-Z0-9._-]+$/.test(trimmed)) {
+    const username = trimmed.replace(/^@/, "");
+    return `https://m.me/${username}`;
+  }
+
   try {
-    const u = new URL((raw ?? "").trim());
-    const ok = u.protocol === "https:" && /^(m\.me|(www\.|m\.)?(facebook|messenger)\.com|fb\.me)$/i.test(u.hostname);
-    return ok ? u.toString() : null;
+    const u = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+    const host = u.hostname.toLowerCase();
+    const ok = /^(m\.me|(www\.|m\.)?(facebook|messenger)\.com|fb\.me)$/i.test(host);
+    if (!ok) return null;
+
+    if (host === "m.me") return u.toString();
+
+    // If it's facebook.com or messenger.com or fb.me, extract page username/slug to route to m.me
+    const pathParts = u.pathname.split("/").filter(Boolean);
+    if (pathParts.length > 0) {
+      if (pathParts[0] === "messages" && pathParts[1] === "t" && pathParts[2]) {
+        return `https://m.me/${pathParts[2]}`;
+      }
+      if (pathParts[0] !== "profile.php" && pathParts[0] !== "messages" && pathParts[0] !== "p") {
+        return `https://m.me/${pathParts[0]}`;
+      }
+    }
+
+    return u.toString();
   } catch {
     return null;
   }

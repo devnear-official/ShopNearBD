@@ -37,9 +37,14 @@ const STATUS: Record<string, string> = { pending: "received, waiting for our con
 
 /** Deterministic reply used when Gemini is not configured or fails. Uses the same retrieved facts. */
 export function fallbackReply(ctx: Context, bangla: boolean): string {
-  if (ctx.intent === "human") return bangla ? "ঠিক আছে, আমাদের টিমের একজনকে জানিয়ে দিয়েছি। এখানেই উত্তর পাবেন।" : "Okay — I've asked a team member to join. They'll reply right here.";
+  if (ctx.intent === "greeting") {
+    return bangla
+      ? "হ্যালো! ShopNear-এ স্বাগতম। 😊 আমি আপনাকে কীভাবে সাহায্য করতে পারি? আমাদের যেকোনো প্রোডাক্ট, দাম, স্টক, ডেলিভারি চার্জ বা অর্ডার সম্পর্কে জানতে পারেন।"
+      : "Hello! Welcome to ShopNear. 😊 How can I help you today? Feel free to ask about our products, delivery charges, or track your order.";
+  }
+  if (ctx.intent === "human") return bangla ? "ঠিক আছে, আমাদের টিমের একজনকে জানিয়ে দিয়েছি। একজন সদস্য শীঘ্রই উত্তর দেবেন।" : "Okay — I've asked a team member to join. They'll reply right here shortly.";
   if (ctx.intent === "order_status") {
-    if (!ctx.orders.length) return bangla ? "নিরাপত্তার জন্য অর্ডারের তথ্য শুধু আপনার প্রাইভেট অর্ডার লিংক দিয়ে দেখা যায় — যে ব্রাউজারে অর্ডার করেছেন সেখানে “Track my order” দেখুন। চাইলে আমাদের টিমের সাথে কথা বলুন।" : "For your privacy I can only show orders placed from this browser. Open “Track my order” on the device you ordered from, or ask for a team member.";
+    if (!ctx.orders.length) return bangla ? "নিরাপত্তার জন্য অর্ডারের তথ্য শুধু আপনার প্রাইভেট অর্ডার লিংক দিয়ে দেখা যায় — যে ব্রাউজারে অর্ডার করেছেন সেখানে “Track my order” দেখুন। অথবা আপনার অর্ডার নম্বরটি (যেমন: SN...) লিখুন।" : "For your privacy I can only show orders placed from this browser. Open “Track my order” on the device you ordered from, or send your order number (e.g. SN...).";
     return ctx.orders.map((o) => `${o.order_number}: ${STATUS[o.status] ?? o.status}${o.tracking_url ? ` — [track parcel](${o.tracking_url})` : ""}.`).join("\n");
   }
   const delivery = ctx.policies.delivery as { zones: { area: string; fee_bdt: number; time: string }[]; free_delivery_from_bdt: number | null } | undefined;
@@ -51,7 +56,7 @@ export function fallbackReply(ctx: Context, bangla: boolean): string {
   const payment = ctx.policies.payment as { cash_on_delivery?: boolean; bkash: string; nagad: string } | undefined;
   if (ctx.intent === "payment" && payment) {
     const opts = [payment.cash_on_delivery && "Cash on Delivery", payment.bkash !== "not available" && "bKash (Send Money)", payment.nagad !== "not available" && "Nagad (Send Money)"].filter(Boolean).join(", ");
-    return bangla ? `পেমেন্ট অপশন: ${opts}। bKash/Nagad-এ অগ্রিম পেমেন্ট করলে আমাদের টিম যাচাই করে অর্ডার কনফার্ম করে। কখনো PIN বা OTP শেয়ার করবেন না।` : `You can pay by ${opts}. Advance bKash/Nagad payments are checked by our team before dispatch — never share your PIN or OTP.`;
+    return bangla ? `পেমেন্ট অপশন: ${opts}। bKash/Nagad-এ পেমেন্ট করলে আমাদের টিম যাচাই করে অর্ডার কনফার্ম করে। কখনো PIN বা OTP শেয়ার করবেন না।` : `You can pay by ${opts}. Advance bKash/Nagad payments are checked by our team before dispatch — never share your PIN or OTP.`;
   }
   const returns = ctx.policies.returns as { returns?: string; refunds?: string } | undefined;
   if (ctx.intent === "returns" && returns?.returns) return `${returns.returns}${returns.refunds ? `\n${returns.refunds}` : ""}`;
@@ -59,7 +64,9 @@ export function fallbackReply(ctx: Context, bangla: boolean): string {
     return (bangla ? "এগুলো দেখতে পারেন:\n" : "Here's what I found:\n") + ctx.products.map((p) => `• [${p.name}](${p.url}) — ৳${p.price.toLocaleString("en-IN")} (${p.stock_note})`).join("\n");
   }
   if (ctx.faqs.length) return ctx.faqs[0].a;
-  return bangla ? "দুঃখিত, এ বিষয়ে আমার কাছে নিশ্চিত তথ্য নেই। আমাদের টিমের সাথে কথা বলতে “Talk to a person” চাপুন।" : "Sorry, I don't have reliable information on that. Tap “Talk to a person” and our team will help.";
+  return bangla
+    ? "ধন্যবাদ আপনার বার্তার জন্য! আমাদের প্রোডাক্ট, ডেলিভারি চার্জ বা অর্ডার সম্পর্কে জানতে সরাসরি যেকোনো প্রশ্ন করতে পারেন, অথবা আমাদের টিমের সাথে কথা বলতে “Talk to a person” বাটনে চাপুন।"
+    : "Thank you for reaching out! You can ask about our products, delivery charges, or orders, or tap “Talk to a person” to connect with our team.";
 }
 
-export const isBangla = (s: string) => /[ঀ-৿]/.test(s);
+export const isBangla = (s: string) => /[ঀ-৿]/.test(s) || /\b(koto|kivabe|bhai|ki|ache|ase|kemon|valo|lagbe|chai|pabo|koi|kothay|dam|taka|bhalo|shob|bhaiya|vai|hobe|ar|ekhon|akhn|obostha|obstha)\b/i.test(s);

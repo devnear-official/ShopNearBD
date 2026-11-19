@@ -25,9 +25,9 @@
   --color-mint: #10b981;
   --color-rose: #f43f5e;
 
-  --font-display: var(--font-bricolage), "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-figtree), "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-bangla: "Noto Sans Bengali", "Kohinoor Bangla", "Hind Siliguri", "Nirmala UI", "Vrinda", system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-hind-siliguri), "Hind Siliguri", "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), var(--font-hind-siliguri), "Hind Siliguri", "Noto Sans Bengali", "Kohinoor Bangla", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-bangla: var(--font-hind-siliguri), "Hind Siliguri", "Noto Sans Bengali", "Kohinoor Bangla", system-ui, sans-serif;
 
   --radius-tag: 1.75rem;
   --radius-chip: 999px;
@@ -325,3 +325,10 @@
 @keyframes sn-glint { 0%, 55% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
 .sn-glint { background-image: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%); background-size: 250% 100%; background-position: 160% 0; animation: sn-glint 9s ease-in-out var(--gd, 0s) infinite; }
 @media (prefers-reduced-motion: reduce) { .sn-glint { animation: none; } }
+
+@media (min-width: 1024px) {
+  :root {
+    --bottom-nav-offset: 0px !important;
+  }
+}
+

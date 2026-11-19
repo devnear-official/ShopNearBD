@@ -144,7 +144,7 @@ insert into public.site_settings (key, value, is_public) values
   'tagline_bn', 'যা দরকার, সব কাছেই।',
   'phone', '+880 1XXX-XXXXXX',
   'whatsapp', '',
-  'email', 'support@shopnear.example',
+  'email', 'shopnearbd@gmail.com',
   'address', 'Dhaka, Bangladesh',
   'hours', 'Sat–Thu, 10am–8pm',
   'social', jsonb_build_object('facebook', '', 'instagram', '', 'tiktok', '', 'youtube', '')

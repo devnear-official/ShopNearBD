@@ -10,7 +10,7 @@ const rules: [Intent, RegExp][] = [
   ["shipping", /\b(deliver|delivery|shipping|courier|charge|how many days|when will|dhaka|outside dhaka|district)\b|ডেলিভারি|চার্জ|কত দিন|কবে পাব|delivery charge|koto din|kobe pabo|charge koto/i],
   ["payment", /\b(pay|payment|bkash|nagad|cash on delivery|cod|trx|transaction|advance)\b|পেমেন্ট|বিকাশ|নগদ|ক্যাশ অন|টাকা দিব|payment kivabe|bikash/i],
   ["returns", /\b(return|refund|exchange|warranty|damaged|broken|wrong item|replace)\b|ফেরত|রিফান্ড|বদল|ওয়ারেন্টি|ভাঙা|ferot|refund|warranty|kharap/i],
-  ["greeting", /^(hi|hello|hey|salam|assalamu|আসসালামু|হ্যালো|হাই|কেমন আছ|kemon acho)[\s!.?]*$/i],
+  ["greeting", /\b(hi|hello|hjello|hey|helo|hlo|salam|assalamu|আসসালামু|হ্যালো|হাই|কেমন আছ|kemon acho|ki obostha|ki obstha|ki khobor|good morning|good evening)\b/i],
 ];
 
 const productHints = /\b(price|cost|stock|available|buy|have|recommend|best|under|below|which|compare|spec|battery|color|colour)\b|দাম|আছে|স্টক|কিনতে|কোনটা|dam koto|ache\b|koto taka|valo kon|suggest/i;

@@ -72,13 +72,15 @@ export function Header({ categories }: { categories: Cat[] }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">
-        <div
-          className={clsx(
-            "mx-auto flex h-16 max-w-7xl items-center gap-1 rounded-full pl-3 pr-1.5 min-[380px]:gap-2 min-[380px]:pl-4 min-[380px]:pr-2 transition-all duration-300 sm:pl-6",
-            scrolled ? "bg-white/85 shadow-[var(--shadow-float)] ring-1 ring-ink/5 backdrop-blur-xl" : "bg-white/60 backdrop-blur-md",
-          )}
-        >
+      <header
+        className={clsx(
+          "sticky top-0 z-40 w-full transition-all duration-300",
+          scrolled
+            ? "border-b border-line/70 bg-white/85 shadow-xs backdrop-blur-xl"
+            : "border-b border-line/40 bg-white/70 backdrop-blur-md",
+        )}
+      >
+        <div className="mx-auto flex h-14 sm:h-16 max-w-7xl items-center gap-1 px-3 min-[380px]:gap-2 min-[380px]:px-4 sm:px-8">
           <Link href="/" className="mr-1 min-w-0 shrink" aria-label="ShopNear BD home">
             <Logo priority className="h-7 min-[380px]:h-8 sm:h-9" />
           </Link>
@@ -135,14 +137,14 @@ export function Header({ categories }: { categories: Cat[] }) {
               <kbd className="rounded-md bg-white px-1.5 text-xs text-mist">/</kbd>
             </button>
             <IconButton label="Search products" onClick={() => setSearch(true)} className="md:hidden"><Search className="size-5" /></IconButton>
-            <Link href="/wishlist" className="relative hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label={`Wishlist, ${wishCount} item${wishCount === 1 ? "" : "s"}`} title="Wishlist">
+            <Link href="/wishlist" className="relative grid size-11 place-items-center rounded-full hover:bg-cloud" aria-label={`Wishlist, ${wishCount} item${wishCount === 1 ? "" : "s"}`} title="Wishlist">
               <Heart className="size-5" />
               {wishCount > 0 && <CountBadge n={wishCount} />}
             </Link>
             <Link href="/order" className="hidden size-11 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="Track your orders" title="Track your orders">
               <PackageSearch className="size-5" />
             </Link>
-            <Link href="/account" className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-cloud" aria-label="My account" title="My account">
+            <Link href="/account" className="hidden size-11 shrink-0 place-items-center rounded-full hover:bg-cloud sm:grid" aria-label="My account" title="My account">
               <UserRound className="size-5" />
             </Link>
             <button
@@ -150,7 +152,7 @@ export function Header({ categories }: { categories: Cat[] }) {
               onClick={() => cart.open()}
               data-cart-target
               onAnimationEnd={() => setBump(false)}
-              className={clsx("relative flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink pl-3 pr-3.5 text-white transition hover:bg-ink-2", bump && "cart-bump")}
+              className={clsx("relative hidden h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink pl-3 pr-3.5 text-white transition hover:bg-ink-2 sm:flex", bump && "cart-bump")}
               aria-label={`Open cart, ${count} item${count === 1 ? "" : "s"}`}
             >
               <ShoppingCart className="size-5" />

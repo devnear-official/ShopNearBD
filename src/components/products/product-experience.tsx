@@ -9,7 +9,7 @@ import clsx from "clsx";
 import type { PaymentSettings, ProductDetail, Variant } from "@/lib/catalog";
 import { compareAtPrice, unitPrice } from "@/lib/pricing";
 import { formatTaka } from "@/lib/format";
-import { swatch, isLight } from "@/lib/colors";
+import { swatch, isLight, resolveVariantColor } from "@/lib/colors";
 import { DISTRICTS, zonesForDistrict, type ShippingSettings } from "@/lib/shipping";
 import { parseJsonArray, useStoredValue, writeStored } from "@/hooks/use-stored-value";
 import { cart } from "@/components/cart/cart-store";
@@ -165,7 +165,7 @@ ${url}` : ""}`;
 
           {options.map((name) => {
             const values = [...new Set(product.variants.map((v) => v.options[name]).filter(Boolean))];
-            const isColor = name.toLowerCase() === "color" || name.toLowerCase() === "colour";
+            const isColor = /^colou?r$/i.test(name) || name.toLowerCase().includes("color") || name.toLowerCase().includes("colour") || name.includes("রং");
             return (
               <fieldset key={name} className="mt-7">
                 <legend className="mb-3 text-sm font-semibold">{name}: <span className="font-normal text-slate">{selected[name]}</span></legend>
@@ -174,7 +174,8 @@ ${url}` : ""}`;
                     const st = valueState(name, val);
                     const on = selected[name] === val;
                     if (isColor) {
-                      const c = swatch(val);
+                      const vMatch = product.variants.find((v) => v.options[name] === val);
+                      const c = resolveVariantColor(vMatch?.options, val, name);
                       return (
                         <button key={val} type="button" onClick={() => setSelected((s) => ({ ...s, [name]: val }))} aria-pressed={on} aria-label={`${val}${st.inStock ? "" : " — sold out"}`}
                           className={clsx("relative flex h-12 items-center gap-2 rounded-full pl-1.5 pr-4 text-sm font-semibold transition", on ? "bg-ink text-white" : "bg-white shadow-[var(--shadow-card)] hover:bg-cloud", !st.inStock && "opacity-60")}>
