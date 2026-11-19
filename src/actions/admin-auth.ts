@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseConfigured, supabaseServer } from "@/lib/supabase/server";
 import { getAdmin } from "@/lib/auth";
 import { system } from "@/lib/db";
 import { clientIpHash, rateLimit } from "@/lib/rate-limit";
@@ -10,6 +10,9 @@ import { siteUrl } from "@/lib/env";
 export type AuthState = { error?: string; message?: string };
 
 export async function adminSignIn(_: AuthState, form: FormData): Promise<AuthState> {
+  if (!supabaseConfigured()) {
+    return { error: "Admin sign-in is unavailable. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY." };
+  }
   const parsed = z.object({ email: z.string().email(), password: z.string().min(6).max(200) }).safeParse({ email: form.get("email"), password: form.get("password") });
   if (!parsed.success) return { error: "Enter your email and password." };
   const ip = await clientIpHash();
@@ -30,6 +33,7 @@ export async function adminSignIn(_: AuthState, form: FormData): Promise<AuthSta
 }
 
 export async function adminSignOut() {
+  if (!supabaseConfigured()) redirect("/admin/login");
   const sb = await supabaseServer();
   await sb.auth.signOut();
   redirect("/admin/login");
@@ -38,6 +42,9 @@ export async function adminSignOut() {
 export async function requestPasswordReset(_: AuthState, form: FormData): Promise<AuthState> {
   const email = z.string().email().safeParse(form.get("email"));
   if (!email.success) return { error: "Enter a valid email." };
+  if (!supabaseConfigured()) {
+    return { error: "Password reset is unavailable. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY." };
+  }
   if (!(await rateLimit(`admin-reset:${await clientIpHash()}`, 3, 3600))) return { error: "Too many requests. Try later." };
   const sb = await supabaseServer();
   await sb.auth.resetPasswordForEmail(email.data, { redirectTo: `${siteUrl()}/admin/settings?tab=account` });

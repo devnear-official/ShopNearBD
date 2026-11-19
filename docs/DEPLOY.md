@@ -7,12 +7,13 @@ Where it runs is your choice: **Vercel** (the README's default), or your own **V
 ## 1. Database (Supabase)
 
 1. Create a Supabase project.
-2. Apply **every** migration in `supabase/migrations/`, in filename order (there are 11 as of this writing):
+2. Apply **every** migration in `supabase/migrations/`, in filename order, before deploying:
    ```bash
    supabase link --project-ref <ref> && supabase db push
    # or, without the CLI:
    DATABASE_URL='postgresql://…' npm run db:migrate
    ```
+   The storefront reads the database while it is prerendered during `next build`. In particular, `20261102000200_promo_content.sql` creates `hero_banners` and `ticker_items`; if it has not been applied to the production database, the Vercel build fails with a missing-relation error.
    - The last two (`20261029001000_admin_speed_and_risk.sql`, `20261029001100_rls_initplan.sql`) are additive and safe on a live database. Without them the admin Orders, Customers and Analytics pages fail.
    - The migrations also create the Storage buckets `product-images` (public) and `payment-proofs` (private). Check they exist under Storage.
 3. **Do not run `npm run db:seed`** on production. It inserts demo products and development defaults.

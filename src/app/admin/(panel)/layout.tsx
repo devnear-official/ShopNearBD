@@ -21,7 +21,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       </Suspense>
       <div className="lg:pl-64">
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-          <Suspense fallback={<div className="space-y-4"><div className="skeleton h-10 w-64 rounded-xl" /><div className="skeleton h-64 rounded-3xl" /></div>}>
+          <Suspense fallback={<div className="space-y-4"><div className="skeleton admin-skeleton h-10 w-64 rounded-xl" /><div className="skeleton admin-skeleton h-64 rounded-3xl" /></div>}>
             {children}
           </Suspense>
         </main>
